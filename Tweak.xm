@@ -1,12 +1,16 @@
+@interface UIView (KhmerSmarterKeyboard)
+@property (retain,nonatomic) UIView *currentView; 
+@end
+
 @interface KSKControlButton : UIButton
 @end
 
 @interface KSKSpaceButton : UIButton
-@property (retain,nonatomic) UILabel * centerLabel;
+@property (retain,nonatomic) UILabel *centerLabel;
 @property (retain,nonatomic) UILabel * leftLabel;
-@property (retain,nonatomic) UILabel * rightLabel;
-@property (copy,nonatomic) NSString * leftCharacter;
-@property (copy,nonatomic) NSString * rightCharacter;
+@property (retain,nonatomic) UILabel *rightLabel;
+@property (copy,nonatomic) NSString *leftCharacter;
+@property (copy,nonatomic) NSString *rightCharacter;
 - (void)animateWayUp:(id)arg1;
 @end
 
@@ -24,6 +28,8 @@
 - (void)insertText:(id)arg1;
 - (void)delete;
 - (void)deleteByTimer;
+// New method
+- (void)applyThemeColor:(UIColor *)color;
 @end
 
 static KSKKeyboardViewController *kbController;
@@ -76,6 +82,9 @@ static CGPoint lastTranslatedPoint;
     [panGesture requireGestureRecognizerToFail:spaceBarSwipeGesture];
   }
 
+  // Keyboard Theme
+  [self applyThemeColor:[UIColor colorWithRed:155.0/255.0 green:89.0/255.0 blue:182.0/255.0 alpha:1.0]];
+
   /*
   // Try solving the long pressing delete button bug, but this does not solve it.
   // Commented out for now
@@ -92,6 +101,18 @@ static CGPoint lastTranslatedPoint;
     }
   }
   */
+}
+
+%new
+- (void)applyThemeColor:(UIColor *)color {
+  KSKKeyboardView *keyboardView = [self keyboardView];
+  for (UIView *subview in [keyboardView subviews]) {
+    if ([subview isKindOfClass:objc_getClass("com_vanna_KhmerKeyboard_Keyboard.LightBox")]) {
+      subview.currentView.backgroundColor = color;
+      continue;
+    }
+    subview.backgroundColor = color;
+  }
 }
 %end
 
