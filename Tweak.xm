@@ -92,10 +92,10 @@ static CGPoint lastTranslatedPoint;
       return %orig;
     } 
 
-    if (translatedPoint.x > lastTranslatedPoint.x + 5) {
+    if (translatedPoint.x > lastTranslatedPoint.x + 7) {
       [kbController.textDocumentProxy adjustTextPositionByCharacterOffset:1];
       lastTranslatedPoint = translatedPoint;
-    } else if (translatedPoint.x < lastTranslatedPoint.x - 5) {
+    } else if (translatedPoint.x < lastTranslatedPoint.x - 7) {
       [kbController.textDocumentProxy adjustTextPositionByCharacterOffset:-1];
       lastTranslatedPoint = translatedPoint;
     }
