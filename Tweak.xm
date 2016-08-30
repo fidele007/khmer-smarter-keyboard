@@ -1,26 +1,38 @@
+@interface KSKControlButton : UIButton
+@end
+
 @interface KSKSpaceButton : UIButton
 @property (retain,nonatomic) UILabel * centerLabel;
 @end
 
 @interface KSKKeyboardView : UIView
 @property (retain,nonatomic) KSKSpaceButton *spaceButton; 
-- (void)setSpaceButton:(KSKSpaceButton *)spaceButton ;
+- (void)setSpaceButton:(KSKSpaceButton *)spaceButton;
 @end
 
 @interface KSKKeyboardViewController : UIInputViewController
 @property (assign,nonatomic) BOOL useZeroSpace;
 @property (retain,nonatomic) KSKKeyboardView *keyboardView;
 - (BOOL)useZeroSpace;
-- (void)setUseZeroSpace:(BOOL)arg1 ;
+- (void)setUseZeroSpace:(BOOL)arg1;
 - (NSString *)lastCharatorTyped;
+- (void)delete;
+- (void)deleteByTimer;
 @end
 
 static KSKKeyboardViewController *kbController;
 static CGPoint iniTouchedPoint;
 static CGPoint lastTranslatedPoint;
 
-// %hook KSKKeyboardView // com_vanna_KhmerKeyboard_Keyboard.KeyboardView
-// %end
+%hook KSKKeyboardView // com_vanna_KhmerKeyboard_Keyboard.KeyboardView
+// Re-implement the hold-to-delete method to fix the bug where the delete method stops working after
+// a few seconds. There is still a problem because this action does not get called continuously
+- (void)handleLongPressForDeleteButtonWithGestureRecognizer:(UILongPressGestureRecognizer *)longPressGesture {
+  if (longPressGesture.state == UIGestureRecognizerStateChanged && kbController) {
+    [kbController.textDocumentProxy deleteBackward];
+  }
+}
+%end
 
 %hook KSKKeyboardViewController // com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController
 - (void)viewDidAppear:(BOOL)arg1 {
@@ -45,6 +57,23 @@ static CGPoint lastTranslatedPoint;
     spaceButton.centerLabel.text = @"ហ្វីដែល០០៧";
   }
   [[self keyboardView] setSpaceButton:spaceButton];
+
+  /*
+  // Try solving the long pressing delete button bug, but this does not solve it.
+  // Commented out for now
+
+  for (KSKControlButton *controlButton in [[self keyboardView] subviews]) {
+    NSArray *gestureRecognizers = controlButton.gestureRecognizers;
+    if ([gestureRecognizers count] == 2 && 
+        [gestureRecognizers[0] isKindOfClass:%c(UILongPressGestureRecognizer)] &&
+        [gestureRecognizers[1] isKindOfClass:%c(UISwipeGestureRecognizer)]) {
+
+      UILongPressGestureRecognizer *longPressGesture = gestureRecognizers[0];
+      UISwipeGestureRecognizer *swipeGesture = gestureRecognizers[1];
+      [swipeGesture requireGestureRecognizerToFail:longPressGesture];
+    }
+  }
+  */
 }
 %end
 
@@ -78,12 +107,12 @@ static CGPoint lastTranslatedPoint;
 %end
 
 %ctor {
+  // %init(KSKKeyboardViewController = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController"),
+  //       KSKSpaceButton = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.SpaceButton")
+  //      );
+
   %init(KSKKeyboardViewController = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController"),
+        KSKKeyboardView = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.KeyboardView"),
         KSKSpaceButton = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.SpaceButton")
        );
-
-  // %init(KSKKeyboardViewController = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController"),
-  //       KSKSpaceButton = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.SpaceButton"),
-  //       KSKKeyboardView = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.KeyboardView")
-  //      );
 }
