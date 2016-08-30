@@ -1,0 +1,9 @@
+Package: com.fidele007.khmersmarterkeyboard
+Name: KhmerSmarterKeyboard
+Depends: mobilesubstrate
+Version: 0.0.1
+Architecture: iphoneos-arm
+Description: Various improvements on Khmer Smart Keyboard. 
+Maintainer: fidele007 <kforcefidele@yahoo.com>
+Author: fidele007 <kforcefidele@yahoo.com>
+Section: Tweaks

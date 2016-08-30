@@ -1,0 +1,7 @@
+.theos/
+_/
+obj/
+theos
+*.deb
+Package/
+com.fidele007.homewifipref.plist
