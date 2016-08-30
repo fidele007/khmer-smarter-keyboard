@@ -3,6 +3,11 @@
 
 @interface KSKSpaceButton : UIButton
 @property (retain,nonatomic) UILabel * centerLabel;
+@property (retain,nonatomic) UILabel * leftLabel;
+@property (retain,nonatomic) UILabel * rightLabel;
+@property (copy,nonatomic) NSString * leftCharacter;
+@property (copy,nonatomic) NSString * rightCharacter;
+- (void)animateWayUp:(id)arg1;
 @end
 
 @interface KSKKeyboardView : UIView
@@ -16,6 +21,7 @@
 - (BOOL)useZeroSpace;
 - (void)setUseZeroSpace:(BOOL)arg1;
 - (NSString *)lastCharatorTyped;
+- (void)insertText:(id)arg1;
 - (void)delete;
 - (void)deleteByTimer;
 @end
@@ -58,6 +64,18 @@ static CGPoint lastTranslatedPoint;
   }
   [[self keyboardView] setSpaceButton:spaceButton];
 
+  // Add swipe up gesture for space bar to re-implement ? and ។ keys
+  UISwipeGestureRecognizer *spaceBarSwipeGesture = [[[UISwipeGestureRecognizer alloc] 
+                                                          initWithTarget:spaceButton
+                                                                  action:@selector(handleSpaceBarSwipeUp:)] 
+                                                                      autorelease];
+  spaceBarSwipeGesture.direction = UISwipeGestureRecognizerDirectionUp;
+  [spaceButton addGestureRecognizer:spaceBarSwipeGesture];
+
+  for (UIPanGestureRecognizer *panGesture in spaceButton.gestureRecognizers) {
+    [panGesture requireGestureRecognizerToFail:spaceBarSwipeGesture];
+  }
+
   /*
   // Try solving the long pressing delete button bug, but this does not solve it.
   // Commented out for now
@@ -88,10 +106,6 @@ static CGPoint lastTranslatedPoint;
     }
 
     CGPoint translatedPoint = [panGesture translationInView:self];
-    if (iniTouchedPoint.x < 30 || iniTouchedPoint.x > [self frame].size.width - 30) {
-      return %orig;
-    } 
-
     if (translatedPoint.x > lastTranslatedPoint.x + 7) {
       [kbController.textDocumentProxy adjustTextPositionByCharacterOffset:1];
       lastTranslatedPoint = translatedPoint;
@@ -104,13 +118,21 @@ static CGPoint lastTranslatedPoint;
   }
 
 }
+
+%new
+- (void)handleSpaceBarSwipeUp:(UISwipeGestureRecognizer *)swipeGesture {
+  CGPoint touchedPoint = [swipeGesture locationInView:self];
+  if (touchedPoint.x < 30) {
+    [self animateWayUp:[self leftLabel]];
+    [kbController insertText:[self leftCharacter]];
+  } else if (touchedPoint.x > [self frame].size.width - 30) {
+    [self animateWayUp:[self rightLabel]];
+    [kbController insertText:[self rightCharacter]];
+  }
+}
 %end
 
 %ctor {
-  // %init(KSKKeyboardViewController = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController"),
-  //       KSKSpaceButton = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.SpaceButton")
-  //      );
-
   %init(KSKKeyboardViewController = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController"),
         KSKKeyboardView = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.KeyboardView"),
         KSKSpaceButton = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.SpaceButton")
