@@ -35,6 +35,7 @@
 @end
 
 static KSKKeyboardViewController *kbController;
+static BOOL isSpaceCursorEnabled;
 static CGPoint iniTouchedPoint;
 static CGPoint lastTranslatedPoint;
 
@@ -56,6 +57,8 @@ static CGPoint lastTranslatedPoint;
   BOOL isZWSPEnabled = [[self sharedDefaults] boolForKey:@"isZWSPEnabled"];
   [self setUseZeroSpace:isZWSPEnabled];
 
+  isSpaceCursorEnabled = [[self sharedDefaults] boolForKey:@"isSpaceCursorEnabled"];
+
   // Pick the input view controller
   kbController = self;
 }
@@ -72,16 +75,18 @@ static CGPoint lastTranslatedPoint;
   }
   [[self keyboardView] setSpaceButton:spaceButton];
 
-  // Add swipe up gesture for space bar to re-implement ? and ។ keys
-  UISwipeGestureRecognizer *spaceBarSwipeGesture = [[[UISwipeGestureRecognizer alloc] 
-                                                          initWithTarget:spaceButton
-                                                                  action:@selector(handleSpaceBarSwipeUp:)] 
-                                                                      autorelease];
-  spaceBarSwipeGesture.direction = UISwipeGestureRecognizerDirectionUp;
-  [spaceButton addGestureRecognizer:spaceBarSwipeGesture];
+  if (isSpaceCursorEnabled) {
+    // Add swipe up gesture for space bar to re-implement ? and ។ keys
+    UISwipeGestureRecognizer *spaceBarSwipeGesture = [[[UISwipeGestureRecognizer alloc] 
+                                                            initWithTarget:spaceButton
+                                                                    action:@selector(handleSpaceBarSwipeUp:)] 
+                                                                        autorelease];
+    spaceBarSwipeGesture.direction = UISwipeGestureRecognizerDirectionUp;
+    [spaceButton addGestureRecognizer:spaceBarSwipeGesture];
 
-  for (UIPanGestureRecognizer *panGesture in spaceButton.gestureRecognizers) {
-    [panGesture requireGestureRecognizerToFail:spaceBarSwipeGesture];
+    for (UIPanGestureRecognizer *panGesture in spaceButton.gestureRecognizers) {
+      [panGesture requireGestureRecognizerToFail:spaceBarSwipeGesture];
+    }
   }
 
   // Keyboard Theme
@@ -121,6 +126,10 @@ static CGPoint lastTranslatedPoint;
 %hook KSKSpaceButton // com_vanna_KhmerKeyboard_Keyboard.SpaceButton
 - (void)buttonPanned:(UIPanGestureRecognizer *)panGesture {
   // Implement cursor moving using the space bar
+  if (!isSpaceCursorEnabled) {
+    return %orig;
+  }
+
   if (panGesture.state == UIGestureRecognizerStateBegan) {
     iniTouchedPoint = [panGesture locationInView:self];
   } else if (panGesture.state == UIGestureRecognizerStateChanged) {
