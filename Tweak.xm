@@ -5,7 +5,7 @@
 @interface KSKControlButton : UIButton
 @end
 
-@interface KSKSpaceButton : UIButton
+@interface KSKSpaceButton : UIButton // com_vanna_KhmerKeyboard_Keyboard.SpaceButton
 @property (retain,nonatomic) UILabel *centerLabel;
 @property (retain,nonatomic) UILabel * leftLabel;
 @property (retain,nonatomic) UILabel *rightLabel;
@@ -14,12 +14,12 @@
 - (void)animateWayUp:(id)arg1;
 @end
 
-@interface KSKKeyboardView : UIView
+@interface KSKKeyboardView : UIView // com_vanna_KhmerKeyboard_Keyboard.KeyboardView
 @property (retain,nonatomic) KSKSpaceButton *spaceButton; 
 - (void)setSpaceButton:(KSKSpaceButton *)spaceButton;
 @end
 
-@interface KSKKeyboardViewController : UIInputViewController
+@interface KSKKeyboardViewController : UIInputViewController // com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController
 @property (assign,nonatomic) BOOL useZeroSpace;
 @property (retain,nonatomic) KSKKeyboardView *keyboardView;
 @property (retain,nonatomic) NSUserDefaults *sharedDefaults; 
@@ -30,6 +30,7 @@
 - (void)insertText:(id)arg1;
 - (void)delete;
 - (void)deleteByTimer;
+- (void)changeToNextLanguage;
 // New method
 - (void)applyThemeColor:(UIColor *)color;
 @end
@@ -78,11 +79,17 @@ static CGPoint lastTranslatedPoint;
   if (isSpaceCursorEnabled) {
     // Add swipe up gesture for space bar to re-implement ? and ។ keys
     UISwipeGestureRecognizer *spaceBarSwipeGesture = [[[UISwipeGestureRecognizer alloc] 
-                                                            initWithTarget:spaceButton
-                                                                    action:@selector(handleSpaceBarSwipeUp:)] 
-                                                                        autorelease];
+                                                          initWithTarget:spaceButton
+                                                                  action:@selector(handleSpaceBarSwipeUp:)] 
+                                                                      autorelease];
     spaceBarSwipeGesture.direction = UISwipeGestureRecognizerDirectionUp;
     [spaceButton addGestureRecognizer:spaceBarSwipeGesture];
+
+    UILongPressGestureRecognizer *spaceBarLongPressGesture = [[[UILongPressGestureRecognizer alloc]
+                                                                initWithTarget:self 
+                                                                        action:@selector(handleSpaceBarLongPress:)] 
+                                                                        autorelease];
+    [spaceButton addGestureRecognizer:spaceBarLongPressGesture];
 
     for (UIPanGestureRecognizer *panGesture in spaceButton.gestureRecognizers) {
       [panGesture requireGestureRecognizerToFail:spaceBarSwipeGesture];
@@ -119,6 +126,14 @@ static CGPoint lastTranslatedPoint;
       continue;
     }
     subview.backgroundColor = color;
+  }
+}
+
+%new
+- (void)handleSpaceBarLongPress:(UILongPressGestureRecognizer *)gesture {
+  HBLogDebug(@"Handle space bar long press: %@", gesture);
+  if (gesture.state == UIGestureRecognizerStateBegan) {
+    [self changeToNextLanguage];
   }
 }
 %end
