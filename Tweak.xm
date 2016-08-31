@@ -22,6 +22,8 @@
 @interface KSKKeyboardViewController : UIInputViewController
 @property (assign,nonatomic) BOOL useZeroSpace;
 @property (retain,nonatomic) KSKKeyboardView *keyboardView;
+@property (retain,nonatomic) NSUserDefaults *sharedDefaults; 
+- (NSUserDefaults *)sharedDefaults;
 - (BOOL)useZeroSpace;
 - (void)setUseZeroSpace:(BOOL)arg1;
 - (NSString *)lastCharatorTyped;
@@ -50,11 +52,11 @@ static CGPoint lastTranslatedPoint;
 - (void)viewDidAppear:(BOOL)arg1 {
   %orig;
 
-  // Set to always zero-width space
-  if (![self useZeroSpace]) {
-    [self setUseZeroSpace:YES];
-  }
+  // Apply ZWSP Settings
+  BOOL isZWSPEnabled = [[self sharedDefaults] boolForKey:@"isZWSPEnabled"];
+  [self setUseZeroSpace:isZWSPEnabled];
 
+  // Pick the input view controller
   kbController = self;
 }
 
