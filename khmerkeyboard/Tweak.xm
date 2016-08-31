@@ -1,3 +1,5 @@
+#include <libcolorpicker.h>
+
 @interface KSKSettingsViewController : UIViewController //KhmerKeyboard.SettingViewController
 @property (retain,nonatomic) NSUserDefaults * mySharedDefaults;
 @property (assign,nonatomic) UISwitch * zeroSpaceSwitcha;
@@ -7,6 +9,9 @@
 
 static UILabel *spaceCursorLabel;
 static UISwitch *spaceCursorSwitch;
+static UILabel *themeLabel;
+static UISwitch *themeSwitch;
+static UIButton *themeButton;
 
 %hook KSKSettingsViewController //KhmerKeyboard.SettingViewController
 - (void)viewDidLayoutSubviews {
@@ -22,6 +27,7 @@ static UISwitch *spaceCursorSwitch;
     }
   }
 
+  // Add SpaceCusor option (label & switch)
   if (!CGRectIsEmpty(ZWSPLabelFrame)) {
     CGRect spaceCursorLabelFrame = ZWSPLabelFrame;
     spaceCursorLabelFrame.origin.y += CGRectGetHeight(ZWSPLabelFrame) + 10;
@@ -50,6 +56,46 @@ static UISwitch *spaceCursorSwitch;
   [spaceCursorSwitch addTarget:self
                         action:@selector(spaceCursorStateChanged:)
               forControlEvents:UIControlEventValueChanged];
+
+  // Add theme option (label & switch)
+  CGRect themeLabelFrame = spaceCursorLabel.frame;
+  themeLabelFrame.origin.y += CGRectGetHeight(themeLabelFrame) + 10;
+  if (themeLabel) {
+    [themeLabel removeFromSuperview];
+    [themeLabel autorelease];
+  }
+  themeLabel = [[UILabel alloc] initWithFrame:themeLabelFrame];
+  themeLabel.text = @"ប្រើ​ពណ៌​សម្រាប់​ក្ដារ​ចុច";
+  [[self view] addSubview:themeLabel];
+
+  CGRect themeSwitchFrame = spaceCursorSwitchFrame;
+  themeSwitchFrame.origin.y += CGRectGetHeight(themeSwitchFrame) + 10;
+  if (themeSwitch) {
+    [themeSwitch removeFromSuperview];
+    [themeSwitch autorelease];
+  }
+  themeSwitch = [[UISwitch alloc] initWithFrame:themeSwitchFrame];
+  [[self view] addSubview:themeSwitch];
+  BOOL isThemeEnabled = [[self mySharedDefaults] boolForKey:@"isThemeEnabled"];
+  [themeSwitch setOn:isThemeEnabled];
+  [themeSwitch addTarget:self
+                  action:@selector(themeSwitchStateChanged:)
+        forControlEvents:UIControlEventValueChanged];
+
+  // Theme button for choosing keyboard's background color
+  if (themeButton) {
+    [themeButton removeFromSuperview];
+  }
+  themeButton = [UIButton buttonWithType:UIButtonTypeSystem];
+  [themeButton setTitle:@"ជ្រើសរើស​ពណ៌​ក្ដារចុច" forState:UIControlStateNormal];
+  CGRect themeButtonFrame = themeLabelFrame;
+  themeButtonFrame.origin.x += 20;
+  themeButtonFrame.origin.y += CGRectGetHeight(themeButtonFrame) + 5;
+  themeButton.frame = themeButtonFrame;
+  [themeButton sizeToFit];
+  [[self view] addSubview:themeButton];
+
+  [themeButton addTarget:self action:@selector(themeButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
 }
 
 - (void)viewDidLoad {
@@ -66,6 +112,27 @@ static UISwitch *spaceCursorSwitch;
   [zeroSpaceSwitch addTarget:self
                       action:@selector(zeroSpaceStateChanged:)
             forControlEvents:UIControlEventValueChanged];
+}
+
+%new
+- (void)themeButtonPressed:(UIButton *)sender {
+  NSString *selectedColor = [[self mySharedDefaults] objectForKey:@"keyboardBackgroundColor"];
+  UIColor *startColor = LCPParseColorString(selectedColor, @"#1E4679");
+  PFColorAlert *alert = [PFColorAlert colorAlertWithStartColor:startColor showAlpha:YES];
+  [alert displayWithCompletion:
+      ^void(UIColor *pickedColor) {
+        NSString *hexString = [UIColor hexFromColor:pickedColor];
+        hexString = [hexString stringByAppendingFormat:@":%f", pickedColor.alpha];
+        [[self mySharedDefaults] setObject:hexString
+                              forKey:@"keyboardBackgroundColor"];
+      }];
+}
+
+%new
+- (void)themeSwitchStateChanged:(UISwitch *)themeSwitch {
+  HBLogDebug(@"Setting ThemeOption to %d", themeSwitch.on);
+  [[self mySharedDefaults] setObject:[NSNumber numberWithBool:themeSwitch.on]
+                              forKey:@"isThemeEnabled"];
 }
 
 %new

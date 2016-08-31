@@ -2,6 +2,7 @@ include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = KhmerSmarterKeyboard
 KhmerSmarterKeyboard_FILES = Tweak.xm
+KhmerSmarterKeyboard_LIBRARIES = colorpicker
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 

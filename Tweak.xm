@@ -1,3 +1,5 @@
+#include <libcolorpicker.h>
+
 @interface UIView (KhmerSmarterKeyboard)
 @property (retain,nonatomic) UIView *currentView; 
 @end
@@ -97,7 +99,13 @@ static CGPoint lastTranslatedPoint;
   }
 
   // Keyboard Theme
-  [self applyThemeColor:[UIColor colorWithRed:155.0/255.0 green:89.0/255.0 blue:182.0/255.0 alpha:1.0]];
+  BOOL isThemeEnabled = [[self sharedDefaults] boolForKey:@"isThemeEnabled"];
+  if (isThemeEnabled) {
+    NSString *kbbackgroundColorHex = [[self sharedDefaults] objectForKey:@"keyboardBackgroundColor"];
+    UIColor *kbBackgroundColor = LCPParseColorString(kbbackgroundColorHex, @"#1E4679");
+    [self applyThemeColor:kbBackgroundColor];
+  }
+  // [self applyThemeColor:[UIColor colorWithRed:155.0/255.0 green:89.0/255.0 blue:182.0/255.0 alpha:1.0]];
 
   /*
   // Try solving the long pressing delete button bug, but this does not solve it.
