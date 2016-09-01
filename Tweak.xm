@@ -56,6 +56,17 @@
 - (void)applyThemeColor:(UIColor *)backgroundColor foregroundColor:(UIColor *)foregroundColor;
 @end
 
+@interface KSKEmojiKeyboardViewController : UIViewController // com_vanna_KhmerKeyboard_Keyboard.EmojiKeyboardViewController
+- (UIViewController *)emojiCollectionViewController;
+- (UIView *)bottomButtonBox;
+- (UIButton *)swicthButton;
+- (UIButton *)recentButton;
+- (NSArray *)emojiCategoryButtons;
+- (UIButton *)deleteButton;
+// New method
+- (void)applyThemeColor:(UIColor *)backgroundColor foregroundColor:(UIColor *)foregroundColor;
+@end
+
 static KSKKeyboardViewController *kbController;
 static BOOL isSpaceCursorEnabled;
 static CGPoint iniTouchedPoint;
@@ -221,9 +232,56 @@ static CGPoint lastTranslatedPoint;
 }
 %end
 
+%hook KSKEmojiKeyboardViewController // com_vanna_KhmerKeyboard_Keyboard.EmojiKeyboardViewController
+- (void)viewDidAppear:(BOOL)appear {
+  %orig;
+
+  if (!appear) {
+    return;
+  }
+
+  // Emoji Keyboard Theme
+  if (!kbController) {
+    return;
+  }
+
+  NSUserDefaults *settings = [kbController sharedDefaults];
+  BOOL isThemeEnabled = [settings boolForKey:@"isThemeEnabled"];
+  if (isThemeEnabled) {
+    NSString *kbBackgroundColorHex = [settings objectForKey:@"keyboardBackgroundColor"];
+    NSString *kbForegroundColorHex = [settings objectForKey:@"keyboardForegroundColor"];
+    UIColor *kbBackgroundColor = LCPParseColorString(kbBackgroundColorHex, @"#1E4679");
+    UIColor *kbForegroundColor = LCPParseColorString(kbForegroundColorHex, @"#FFFFFF");
+    [self applyThemeColor:kbBackgroundColor foregroundColor:kbForegroundColor];
+  }
+}
+
+%new
+- (void)applyThemeColor:(UIColor *)backgroundColor foregroundColor:(UIColor *)foregroundColor {
+  // Background color
+  [self view].backgroundColor = backgroundColor;
+  UICollectionViewController *emojiCollectionViewController = 
+    (UICollectionViewController *)[self emojiCollectionViewController];
+  emojiCollectionViewController.collectionView.backgroundColor = backgroundColor;
+  
+  [self bottomButtonBox].backgroundColor = backgroundColor;
+
+  // // Foreground color
+  // [[self swicthButton] setTitleColor:foregroundColor forState:UIControlStateNormal];
+  // [[self deleteButton] setTitleColor:foregroundColor forState:UIControlStateNormal];
+  // [[self recentButton] setTitleColor:foregroundColor forState:UIControlStateNormal];
+  // for (UIButton *emojiCategoryButton in [self emojiCategoryButtons]) {
+  //   if ([emojiCategoryButton respondsToSelector:@selector(setTitleColor:forState:)]) {
+  //     [emojiCategoryButton setTitleColor:foregroundColor forState:UIControlStateNormal];
+  //   }
+  // }
+}
+%end
+
 %ctor {
   %init(KSKKeyboardViewController = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController"),
         KSKKeyboardView = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.KeyboardView"),
-        KSKSpaceButton = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.SpaceButton")
+        KSKSpaceButton = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.SpaceButton"),
+        KSKEmojiKeyboardViewController = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.EmojiKeyboardViewController")
        );
 }
