@@ -69,6 +69,13 @@ static CGPoint lastTranslatedPoint;
     [kbController.textDocumentProxy deleteBackward];
   }
 }
+
+// Long press on space bar to switch between internal keyboards
+- (void)handleLongPressForSpaceButtonWithGestureRecognizer:(UILongPressGestureRecognizer *)longPressGesture {
+  if (longPressGesture.state == UIGestureRecognizerStateBegan) {
+    [self changeToNextLanguage];
+  }
+}
 %end
 
 %hook KSKKeyboardViewController // com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController
@@ -105,12 +112,6 @@ static CGPoint lastTranslatedPoint;
                                                                       autorelease];
     spaceBarSwipeGesture.direction = UISwipeGestureRecognizerDirectionUp;
     [spaceButton addGestureRecognizer:spaceBarSwipeGesture];
-
-    UILongPressGestureRecognizer *spaceBarLongPressGesture = [[[UILongPressGestureRecognizer alloc]
-                                                                initWithTarget:self 
-                                                                        action:@selector(handleSpaceBarLongPress:)] 
-                                                                        autorelease];
-    [spaceButton addGestureRecognizer:spaceBarLongPressGesture];
 
     for (UIPanGestureRecognizer *panGesture in spaceButton.gestureRecognizers) {
       [panGesture requireGestureRecognizerToFail:spaceBarSwipeGesture];
@@ -176,13 +177,6 @@ static CGPoint lastTranslatedPoint;
         }
       }
     }
-  }
-}
-
-%new
-- (void)handleSpaceBarLongPress:(UILongPressGestureRecognizer *)gesture {
-  if (gesture.state == UIGestureRecognizerStateBegan) {
-    [self changeToNextLanguage];
   }
 }
 %end
