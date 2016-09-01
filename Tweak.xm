@@ -82,14 +82,14 @@ static CGPoint lastTranslatedPoint;
 - (void)viewDidAppear:(BOOL)arg1 {
   %orig;
 
+  // Pick the input view controller
+  kbController = self;
+
   // Apply ZWSP Settings
   BOOL isZWSPEnabled = [[self sharedDefaults] boolForKey:@"isZWSPEnabled"];
   [self setUseZeroSpace:isZWSPEnabled];
 
   isSpaceCursorEnabled = [[self sharedDefaults] boolForKey:@"isSpaceCursorEnabled"];
-
-  // Pick the input view controller
-  kbController = self;
 }
 
 - (void)viewDidLayoutSubviews {  
@@ -106,16 +106,16 @@ static CGPoint lastTranslatedPoint;
 
   if (isSpaceCursorEnabled) {
     // Add swipe up gesture for space bar to re-implement ? and ។ keys
-    UISwipeGestureRecognizer *spaceBarSwipeGesture = [[[UISwipeGestureRecognizer alloc] 
-                                                          initWithTarget:spaceButton
-                                                                  action:@selector(handleSpaceBarSwipeUp:)] 
-                                                                      autorelease];
+    KSKSpaceButton *spaceButton = [self keyboardView].spaceButton;
+    UISwipeGestureRecognizer *spaceBarSwipeGesture = [[UISwipeGestureRecognizer alloc] 
+                                                        initWithTarget:spaceButton
+                                                                action:@selector(handleSpaceBarSwipeUp:)];
     spaceBarSwipeGesture.direction = UISwipeGestureRecognizerDirectionUp;
-    [spaceButton addGestureRecognizer:spaceBarSwipeGesture];
-
-    for (UIPanGestureRecognizer *panGesture in spaceButton.gestureRecognizers) {
-      [panGesture requireGestureRecognizerToFail:spaceBarSwipeGesture];
+    for (UIGestureRecognizer *gesture in spaceButton.gestureRecognizers) {
+      [gesture requireGestureRecognizerToFail:spaceBarSwipeGesture];
     }
+    [spaceButton addGestureRecognizer:spaceBarSwipeGesture];
+    [spaceBarSwipeGesture release];
   }
 
   // Keyboard Theme
@@ -127,7 +127,6 @@ static CGPoint lastTranslatedPoint;
     UIColor *kbForegroundColor = LCPParseColorString(kbForegroundColorHex, @"#FFFFFF");
     [self applyThemeColor:kbBackgroundColor foregroundColor:kbForegroundColor];
   }
-  // [self applyThemeColor:[UIColor colorWithRed:155.0/255.0 green:89.0/255.0 blue:182.0/255.0 alpha:1.0]];
 
   /*
   // Try solving the long pressing delete button bug, but this does not solve it.
