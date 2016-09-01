@@ -27,75 +27,35 @@ static UIButton *themeButton;
     }
   }
 
-  // Add SpaceCusor option (label & switch)
+  // Update |spaceCursorLabel| frame with orientation
   if (!CGRectIsEmpty(ZWSPLabelFrame)) {
     CGRect spaceCursorLabelFrame = ZWSPLabelFrame;
     spaceCursorLabelFrame.origin.y += CGRectGetHeight(ZWSPLabelFrame) + 10;
     spaceCursorLabelFrame.size.width += 30;
-    if (spaceCursorLabel) {
-      [spaceCursorLabel removeFromSuperview];
-      [spaceCursorLabel autorelease];
-    }
-    spaceCursorLabel = [[UILabel alloc] initWithFrame:spaceCursorLabelFrame];
-    spaceCursorLabel.text = @"ផ្លាស់ទី Cursor ដោយអូសប៊ូតុងដកឃ្លា";
-    [[self view] addSubview:spaceCursorLabel];
+    spaceCursorLabel.frame = spaceCursorLabelFrame;
   }
 
-  // HBLogDebug(@"Switch frame: %@", NSStringFromCGRect([self zeroSpaceSwitcha].frame));
+  // Update |spaceCursorSwitch| frame with orientation
   CGRect spaceCursorSwitchFrame = [self zeroSpaceSwitcha].frame;
   spaceCursorSwitchFrame.origin.y += CGRectGetHeight(spaceCursorSwitchFrame) + 10;
-  if (spaceCursorSwitch) {
-    HBLogDebug(@"Removing switch: %@", spaceCursorSwitch);
-    [spaceCursorSwitch removeFromSuperview];
-    [spaceCursorSwitch autorelease];
-  }
-  spaceCursorSwitch = [[UISwitch alloc] initWithFrame:spaceCursorSwitchFrame];
-  [[self view] addSubview:spaceCursorSwitch];
-  BOOL isSpaceCursorEnabled = [[self mySharedDefaults] boolForKey:@"isSpaceCursorEnabled"];
-  [spaceCursorSwitch setOn:isSpaceCursorEnabled];
-  [spaceCursorSwitch addTarget:self
-                        action:@selector(spaceCursorStateChanged:)
-              forControlEvents:UIControlEventValueChanged];
+  spaceCursorSwitch.frame = spaceCursorSwitchFrame;
 
-  // Add theme option (label & switch)
+  // Update |themeLabel| frame with orientation
   CGRect themeLabelFrame = spaceCursorLabel.frame;
   themeLabelFrame.origin.y += CGRectGetHeight(themeLabelFrame) + 10;
-  if (themeLabel) {
-    [themeLabel removeFromSuperview];
-    [themeLabel autorelease];
-  }
-  themeLabel = [[UILabel alloc] initWithFrame:themeLabelFrame];
-  themeLabel.text = @"ប្រើ​ពណ៌​សម្រាប់​ក្ដារ​ចុច";
-  [[self view] addSubview:themeLabel];
-
+  themeLabel.frame = themeLabelFrame;
+  
+  // Update |themeSwitch| frame with orientation
   CGRect themeSwitchFrame = spaceCursorSwitchFrame;
   themeSwitchFrame.origin.y += CGRectGetHeight(themeSwitchFrame) + 10;
-  if (themeSwitch) {
-    [themeSwitch removeFromSuperview];
-    [themeSwitch autorelease];
-  }
-  themeSwitch = [[UISwitch alloc] initWithFrame:themeSwitchFrame];
-  [[self view] addSubview:themeSwitch];
-  BOOL isThemeEnabled = [[self mySharedDefaults] boolForKey:@"isThemeEnabled"];
-  [themeSwitch setOn:isThemeEnabled];
-  [themeSwitch addTarget:self
-                  action:@selector(themeSwitchStateChanged:)
-        forControlEvents:UIControlEventValueChanged];
+  themeSwitch.frame = themeSwitchFrame;  
 
-  // Theme button for choosing keyboard's background color
-  if (themeButton) {
-    [themeButton removeFromSuperview];
-  }
-  themeButton = [UIButton buttonWithType:UIButtonTypeSystem];
-  [themeButton setTitle:@"ជ្រើសរើស​ពណ៌​ក្ដារចុច" forState:UIControlStateNormal];
+  // Update |themeButton| frame with orientation
   CGRect themeButtonFrame = themeLabelFrame;
   themeButtonFrame.origin.x += 20;
   themeButtonFrame.origin.y += CGRectGetHeight(themeButtonFrame) + 5;
   themeButton.frame = themeButtonFrame;
   [themeButton sizeToFit];
-  [[self view] addSubview:themeButton];
-
-  [themeButton addTarget:self action:@selector(themeButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
 }
 
 - (void)viewDidLoad {
@@ -105,6 +65,44 @@ static UIButton *themeButton;
   BOOL isZWSPEnabled = [[self mySharedDefaults] boolForKey:@"isZWSPEnabled"];
   HBLogDebug(@"isZWSPEnabled: %d", isZWSPEnabled);
   [[self zeroSpaceSwitcha] setOn:isZWSPEnabled];
+
+  // Create |spaceCursorLabel|
+  spaceCursorLabel = [[[UILabel alloc] init] autorelease];
+  spaceCursorLabel.text = @"ផ្លាស់ទី Cursor ដោយអូសប៊ូតុងដកឃ្លា";
+  [[self view] addSubview:spaceCursorLabel];
+
+  // Create |spaceCursorSwitch|
+  spaceCursorSwitch = [[[UISwitch alloc] init] autorelease];
+  BOOL isSpaceCursorEnabled = [[self mySharedDefaults] boolForKey:@"isSpaceCursorEnabled"];
+  [spaceCursorSwitch setOn:isSpaceCursorEnabled];
+  [spaceCursorSwitch addTarget:self
+                        action:@selector(spaceCursorStateChanged:)
+              forControlEvents:UIControlEventValueChanged];
+  [[self view] addSubview:spaceCursorSwitch];
+
+  // Create |themeLabel|
+  themeLabel = [[[UILabel alloc] init] autorelease];
+  themeLabel.text = @"ប្រើ​ពណ៌​សម្រាប់​ក្ដារ​ចុច";
+  [[self view] addSubview:themeLabel];
+
+  // Create |themeSwitch|
+  themeSwitch = [[[UISwitch alloc] init] autorelease];
+  BOOL isThemeEnabled = [[self mySharedDefaults] boolForKey:@"isThemeEnabled"];
+  [themeSwitch setOn:isThemeEnabled];
+  [themeSwitch addTarget:self
+                  action:@selector(themeSwitchStateChanged:)
+        forControlEvents:UIControlEventValueChanged];
+  [[self view] addSubview:themeSwitch];
+
+  // Theme button for choosing keyboard's background color
+  /* UIButton created with  +buttonWithType: returns an autorelease object, so there is no need
+     to explicitly release it */
+  themeButton = [UIButton buttonWithType:UIButtonTypeSystem];
+  [themeButton setTitle:@"ជ្រើសរើស​ពណ៌​ក្ដារចុច" forState:UIControlStateNormal];
+  [themeButton addTarget:self
+                  action:@selector(themeButtonPressed:)
+        forControlEvents:UIControlEventTouchUpInside];
+  [[self view] addSubview:themeButton];
 }
 
 - (void)setZeroSpaceSwitcha:(UISwitch *)zeroSpaceSwitch {
