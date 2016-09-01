@@ -3,7 +3,8 @@ Name: KhmerSmarterKeyboard
 Depends: mobilesubstrate, org.thebigboss.libcolorpicker
 Version: 0.0.1
 Architecture: iphoneos-arm
-Description: Various improvements on Khmer Smart Keyboard. 
+Description: Various improvements on Khmer Smart Keyboard.
+Depiction: http://fidele007.github.io/depictions/?p=com.fidele007.khmersmarterkeyboard
 Maintainer: fidele007 <kforcefidele@yahoo.com>
 Author: fidele007 <kforcefidele@yahoo.com>
 Section: Tweaks

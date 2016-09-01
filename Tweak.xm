@@ -1,7 +1,26 @@
 #include <libcolorpicker.h>
 
 @interface UIView (KhmerSmarterKeyboard)
-@property (retain,nonatomic) UIView *currentView; 
+// com_vanna_KhmerKeyboard_Keyboard.LightBox
+@property (retain,nonatomic) UIView *currentView; // com_vanna_KhmerKeyboard_Keyboard.AdsAndPredictionView
+
+// com_vanna_KhmerKeyboard_Keyboard.AdsAndPredictionView
+- (UIScrollView *)predictionView;
+
+// com_vanna_KhmerKeyboard_Keyboard.KeyButton
+- (void)setTitleColor:(id)arg1 forState:(unsigned long long)arg2 ;
+
+// com_vanna_KhmerKeyboard_Keyboard.SpaceButton
+- (UILabel *)leftLabel;
+- (UILabel *)centerLabel;
+- (UILabel *)rightLabel;
+
+// com_vanna_KhmerKeyboard_Keyboard.CharacterButtonsContainer
+- (NSArray *)characterButtons;
+@end
+
+@interface UIButton (KhmerSmarterKeyboard)
+- (void)setTextColor:(UIColor *)arg1 ;
 @end
 
 @interface KSKControlButton : UIButton
@@ -34,7 +53,7 @@
 - (void)deleteByTimer;
 - (void)changeToNextLanguage;
 // New method
-- (void)applyThemeColor:(UIColor *)color;
+- (void)applyThemeColor:(UIColor *)backgroundColor foregroundColor:(UIColor *)foregroundColor;
 @end
 
 static KSKKeyboardViewController *kbController;
@@ -101,9 +120,11 @@ static CGPoint lastTranslatedPoint;
   // Keyboard Theme
   BOOL isThemeEnabled = [[self sharedDefaults] boolForKey:@"isThemeEnabled"];
   if (isThemeEnabled) {
-    NSString *kbbackgroundColorHex = [[self sharedDefaults] objectForKey:@"keyboardBackgroundColor"];
-    UIColor *kbBackgroundColor = LCPParseColorString(kbbackgroundColorHex, @"#1E4679");
-    [self applyThemeColor:kbBackgroundColor];
+    NSString *kbBackgroundColorHex = [[self sharedDefaults] objectForKey:@"keyboardBackgroundColor"];
+    NSString *kbForegroundColorHex = [[self sharedDefaults] objectForKey:@"keyboardForegroundColor"];
+    UIColor *kbBackgroundColor = LCPParseColorString(kbBackgroundColorHex, @"#1E4679");
+    UIColor *kbForegroundColor = LCPParseColorString(kbForegroundColorHex, @"#FFFFFF");
+    [self applyThemeColor:kbBackgroundColor foregroundColor:kbForegroundColor];
   }
   // [self applyThemeColor:[UIColor colorWithRed:155.0/255.0 green:89.0/255.0 blue:182.0/255.0 alpha:1.0]];
 
@@ -126,20 +147,39 @@ static CGPoint lastTranslatedPoint;
 }
 
 %new
-- (void)applyThemeColor:(UIColor *)color {
+- (void)applyThemeColor:(UIColor *)backgroundColor foregroundColor:(UIColor *)foregroundColor {
   KSKKeyboardView *keyboardView = [self keyboardView];
   for (UIView *subview in [keyboardView subviews]) {
+    // Background color
+    subview.backgroundColor = backgroundColor;
     if ([subview isKindOfClass:objc_getClass("com_vanna_KhmerKeyboard_Keyboard.LightBox")]) {
-      subview.currentView.backgroundColor = color;
-      continue;
+      subview.currentView.backgroundColor = backgroundColor;
+
+      // Foreground color
+      UIScrollView *scrollView = [[subview currentView] predictionView];
+      for (UIButton *suggestionBox in [scrollView subviews]) {
+        if ([suggestionBox respondsToSelector:@selector(setTitleColor:forState:)]) {
+          [suggestionBox setTitleColor:foregroundColor forState:UIControlStateNormal];
+        }
+      }
+    } else if ([subview isKindOfClass:objc_getClass("com_vanna_KhmerKeyboard_Keyboard.ControlButton")]) {
+      [subview setTitleColor:foregroundColor forState:UIControlStateNormal];
+    } else if ([subview isKindOfClass:objc_getClass("com_vanna_KhmerKeyboard_Keyboard.SpaceButton")]) {
+      [[subview leftLabel] setTextColor:foregroundColor];
+      [[subview centerLabel] setTextColor:foregroundColor];
+      [[subview rightLabel] setTextColor:foregroundColor];
+    } else if ([subview isKindOfClass:objc_getClass("com_vanna_KhmerKeyboard_Keyboard.CharacterButtonsContainer")]) {
+      for (UIButton *charButton in [subview subviews]) {
+        if ([charButton respondsToSelector:@selector(setTextColor:)]) {
+          [charButton setTextColor:foregroundColor];
+        }
+      }
     }
-    subview.backgroundColor = color;
   }
 }
 
 %new
 - (void)handleSpaceBarLongPress:(UILongPressGestureRecognizer *)gesture {
-  HBLogDebug(@"Handle space bar long press: %@", gesture);
   if (gesture.state == UIGestureRecognizerStateBegan) {
     [self changeToNextLanguage];
   }
