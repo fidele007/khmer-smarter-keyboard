@@ -149,8 +149,9 @@ static CGPoint lastTranslatedPoint;
 %new
 - (void)applyThemeColor:(UIColor *)backgroundColor foregroundColor:(UIColor *)foregroundColor {
   KSKKeyboardView *keyboardView = [self keyboardView];
+  // Background color
+  keyboardView.backgroundColor = backgroundColor;
   for (UIView *subview in [keyboardView subviews]) {
-    // Background color
     subview.backgroundColor = backgroundColor;
     if ([subview isKindOfClass:objc_getClass("com_vanna_KhmerKeyboard_Keyboard.LightBox")]) {
       subview.currentView.backgroundColor = backgroundColor;
