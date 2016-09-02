@@ -93,6 +93,19 @@ static CGPoint lastTranslatedPoint;
 - (void)viewDidAppear:(BOOL)arg1 {
   %orig;
 
+  // TODO: Get a user-picked image
+  UIImage *backgroundImage = [UIImage imageWithContentsOfFile:@"/Library/Application Support/wallpaper.png"];
+  UIImageView *backgroundImageView = [[[UIImageView alloc] initWithImage:backgroundImage] autorelease];
+  backgroundImageView.frame = [[self keyboardView] frame];
+  [[self keyboardView] addSubview:backgroundImageView];
+  [[self keyboardView] sendSubviewToBack:backgroundImageView];
+
+  // Adding overlay view over image view to darken the image
+  UIView *overlayView = [[[UIView alloc] initWithFrame:[[self keyboardView] frame]] autorelease];
+  overlayView.backgroundColor = [UIColor blackColor];
+  overlayView.alpha = 0.5;
+  [backgroundImageView addSubview:overlayView];
+
   // Pick the input view controller
   kbController = self;
 
