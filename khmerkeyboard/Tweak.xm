@@ -16,6 +16,10 @@ static UISwitch *themeSwitch;
 static UIButton *themeButton;
 static UIButton *charThemeButton;
 
+static UIImagePickerController *ipc;
+static UIPopoverController *popover;
+static UIButton *photoPickerButton;
+
 %hook KSKSettingsViewController //KhmerKeyboard.SettingViewController
 - (void)viewDidLayoutSubviews {
   %orig;
@@ -65,6 +69,12 @@ static UIButton *charThemeButton;
   charThemeButtonFrame.origin.y += CGRectGetHeight(charThemeButtonFrame);
   charThemeButton.frame = charThemeButtonFrame;
   [charThemeButton sizeToFit];
+
+  // Update |photoPickerButton| frame with orientation
+  CGRect photoPickerButtonFrame = charThemeButtonFrame;
+  photoPickerButtonFrame.origin.y += CGRectGetHeight(photoPickerButtonFrame) + 20;
+  photoPickerButton.frame = photoPickerButtonFrame;
+  [photoPickerButton sizeToFit];
 }
 
 - (void)viewDidLoad {
@@ -124,6 +134,15 @@ static UIButton *charThemeButton;
     themeButton.alpha = 0;
     charThemeButton.alpha = 0;
   }
+
+  // Photo picker button
+  photoPickerButton = [UIButton buttonWithType:UIButtonTypeSystem];
+  [photoPickerButton setTitle:@"ជ្រើស​រើស​រូប​ផៃ្ទខាង​ក្រោយ" forState:UIControlStateNormal];
+  [photoPickerButton addTarget:self
+                        action:@selector(photoPickerButtonPressed:)
+              forControlEvents:UIControlEventTouchUpInside];
+  [[self view] addSubview:photoPickerButton];
+
 }
 
 - (void)setZeroSpaceSwitcha:(UISwitch *)zeroSpaceSwitch {
@@ -131,6 +150,46 @@ static UIButton *charThemeButton;
   [zeroSpaceSwitch addTarget:self
                       action:@selector(zeroSpaceStateChanged:)
             forControlEvents:UIControlEventValueChanged];
+}
+
+%new
+- (void)imagePickerController:(UIImagePickerController *)picker
+      didFinishPickingMediaWithInfo:(NSDictionary *)info {
+  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) {
+    [picker dismissViewControllerAnimated:YES completion:nil];
+  } else {
+    [popover dismissPopoverAnimated:YES];
+  }
+  UIImage *pickedImage = [info objectForKey:UIImagePickerControllerOriginalImage];
+  NSData *imageData = UIImageJPEGRepresentation(pickedImage, 0.9f);
+  NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+  NSString *documentsDirectory = [paths firstObject];
+  NSString *fileName = [NSString stringWithFormat:@"%@/keyboardBackgroundImage.jpg", documentsDirectory];
+  [imageData writeToFile:fileName atomically:YES];
+  [[self mySharedDefaults] setObject:fileName forKey:@"KSKBackgroundImage"];
+  [[self mySharedDefaults] synchronize];
+}
+
+%new
+- (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker {
+  [picker dismissViewControllerAnimated:YES completion:nil];
+}
+
+%new
+- (void)photoPickerButtonPressed:(UIButton *)sender {
+  ipc = [[[UIImagePickerController alloc] init] autorelease];
+  ipc.delegate = self;
+  // ipc.sourceType = UIImagePickerControllerSourceTypeSavedPhotosAlbum;
+  ipc.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
+  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) {
+    [self presentViewController:ipc animated:YES completion:nil];
+  } else {
+    popover = [[[UIPopoverController alloc] initWithContentViewController:ipc] autorelease];
+    [popover presentPopoverFromRect:sender.frame
+                             inView:[self view]
+           permittedArrowDirections:UIPopoverArrowDirectionAny
+                           animated:YES];
+  }
 }
 
 %new
@@ -143,7 +202,8 @@ static UIButton *charThemeButton;
         NSString *hexString = [UIColor hexFromColor:pickedColor];
         hexString = [hexString stringByAppendingFormat:@":%f", pickedColor.alpha];
         [[self mySharedDefaults] setObject:hexString
-                              forKey:@"keyboardForegroundColor"];
+                                    forKey:@"keyboardForegroundColor"];
+        [[self mySharedDefaults] synchronize];
       }];
 }
 
@@ -157,7 +217,8 @@ static UIButton *charThemeButton;
         NSString *hexString = [UIColor hexFromColor:pickedColor];
         hexString = [hexString stringByAppendingFormat:@":%f", pickedColor.alpha];
         [[self mySharedDefaults] setObject:hexString
-                              forKey:@"keyboardBackgroundColor"];
+                                    forKey:@"keyboardBackgroundColor"];
+        [[self mySharedDefaults] synchronize];
       }];
 }
 
@@ -166,6 +227,7 @@ static UIButton *charThemeButton;
   HBLogDebug(@"Setting ThemeOption to %d", themeSwitch.on);
   [[self mySharedDefaults] setObject:[NSNumber numberWithBool:themeSwitch.on]
                               forKey:@"isThemeEnabled"];
+  [[self mySharedDefaults] synchronize];
   if (themeSwitch.on) {
     [self animateView:themeButton withAlpha:1.0 duration:0.5];
     [self animateView:charThemeButton withAlpha:1.0 duration:0.5];
@@ -180,6 +242,7 @@ static UIButton *charThemeButton;
   HBLogDebug(@"Setting ZWSP to %d", zeroSpaceSwitch.on);
   [[self mySharedDefaults] setObject:[NSNumber numberWithBool:zeroSpaceSwitch.on]
                               forKey:@"isZWSPEnabled"];
+  [[self mySharedDefaults] synchronize];
 }
 
 %new
@@ -187,6 +250,7 @@ static UIButton *charThemeButton;
   HBLogDebug(@"Setting SpaceCursor to %d", spaceCursorSwitch.on);
   [[self mySharedDefaults] setObject:[NSNumber numberWithBool:spaceCursorSwitch.on]
                               forKey:@"isSpaceCursorEnabled"];
+  [[self mySharedDefaults] synchronize];
 }
 
 %new
