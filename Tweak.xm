@@ -45,8 +45,8 @@
 @property (retain,nonatomic) KSKKeyboardView *keyboardView;
 @property (retain,nonatomic) NSUserDefaults *sharedDefaults; 
 - (NSUserDefaults *)sharedDefaults;
-- (BOOL)useZeroSpace;
-- (void)setUseZeroSpace:(BOOL)arg1;
+- (void)setUseZeroSpace:(BOOL)arg1; // v2.1.1 and down
+- (void)setIsZeroSpace:(BOOL)arg1 ; // v2.1.2 and up
 - (NSString *)lastCharatorTyped;
 - (void)insertText:(id)arg1;
 - (void)delete;
@@ -98,7 +98,11 @@ static CGPoint lastTranslatedPoint;
 
   // Apply ZWSP Settings
   BOOL isZWSPEnabled = [[self sharedDefaults] boolForKey:@"isZWSPEnabled"];
-  [self setUseZeroSpace:isZWSPEnabled];
+  if ([self respondsToSelector:@selector(setUseZeroSpace:)]) { // v2.1.1 and down
+    [self setUseZeroSpace:isZWSPEnabled];
+  } else if ([self respondsToSelector:@selector(setIsZeroSpace:)]) { // v2.1.2 and up
+    [self setIsZeroSpace:isZWSPEnabled];
+  }
 
   isSpaceCursorEnabled = [[self sharedDefaults] boolForKey:@"isSpaceCursorEnabled"];
 }
