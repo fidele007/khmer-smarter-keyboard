@@ -5,3 +5,4 @@ theos
 *.deb
 Package/
 *.sublime-*
+.DS_Store
