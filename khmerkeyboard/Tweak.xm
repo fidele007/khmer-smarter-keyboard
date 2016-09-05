@@ -200,6 +200,38 @@ static UIButton *charThemeButton;
 }
 %end
 
+@interface KSKELViewController : UIViewController
+- (UILabel *)settinglabel;
+- (UIButton *)settingbutton;
+@end
+
+%group KSKv212
+%hook KSKELViewController // KhmerKeyboard.ELViewController
+- (void)viewDidLoad {
+  %orig;
+
+  if ([self respondsToSelector:@selector(settinglabel)]) {
+    [self settinglabel].hidden = NO;
+  }
+  
+  if ([self respondsToSelector:@selector(settingbutton)]) {
+    [self settingbutton].hidden = NO;
+    [self settingbutton].userInteractionEnabled = YES;
+  }
+}
+%end
+%end
+
 %ctor {
+  NSString *currentVersion = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
+  NSString *newVersion = @"2.1.2";
+
+  if ([currentVersion compare:newVersion options:NSNumericSearch] == NSOrderedAscending) {
+    // currentVersion < newVersion
+  } else {
+    // currentVersion >= newVersion
+    %init(KSKv212, KSKELViewController = objc_getClass("KhmerKeyboard.ELViewController"));
+  }
+
   %init(KSKSettingsViewController = objc_getClass("KhmerKeyboard.SettingViewController"));
 }
