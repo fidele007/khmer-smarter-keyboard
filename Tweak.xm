@@ -38,6 +38,7 @@
 @interface KSKKeyboardView : UIView // com_vanna_KhmerKeyboard_Keyboard.KeyboardView
 @property (retain,nonatomic) KSKSpaceButton *spaceButton; 
 - (void)setSpaceButton:(KSKSpaceButton *)spaceButton;
+- (UIImage *)imageWithImage:(UIImage *)image scaledToSize:(CGSize)newSize;
 @end
 
 @interface KSKKeyboardViewController : UIInputViewController // com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController
@@ -87,29 +88,49 @@ static CGPoint lastTranslatedPoint;
     [self changeToNextLanguage];
   }
 }
+
+- (void)layoutSubviews {
+  %orig;
+
+  // Keyboard's background image
+  if (!kbController) {
+    return;
+  }
+  
+  NSString *backgroundImagePath = [[kbController sharedDefaults] objectForKey:@"KSKBackgroundImage"];
+  CGFloat overlayAlpha = [[kbController sharedDefaults] floatForKey:@"KSKBackgroundAlpha"] ?: 0;
+  if (backgroundImagePath && ![backgroundImagePath isEqualToString:@""]) {
+    NSData *imageData = [NSData dataWithContentsOfFile:backgroundImagePath];
+    UIImage *backgroundImage = [UIImage imageWithData:imageData];
+    UIImage *scaledImage = [self imageWithImage:backgroundImage scaledToSize:[self frame].size];
+    if (backgroundImage) {
+      UIImageView *backgroundImageView = [[[UIImageView alloc] initWithImage:scaledImage] autorelease];
+      backgroundImageView.frame = [self frame];
+      [self addSubview:backgroundImageView];
+      [self sendSubviewToBack:backgroundImageView];
+
+      // Adding overlay view over image view to darken the image
+      UIView *overlayView = [[[UIView alloc] initWithFrame:[self frame]] autorelease];
+      overlayView.backgroundColor = [UIColor blackColor];
+      overlayView.alpha = overlayAlpha;
+      [backgroundImageView addSubview:overlayView];
+    }
+  }
+}
+
+%new
+- (UIImage *)imageWithImage:(UIImage *)image scaledToSize:(CGSize)newSize {
+  UIGraphicsBeginImageContext(newSize);
+  [image drawInRect:CGRectMake(0, 0, newSize.width, newSize.height)];
+  UIImage *newImage = UIGraphicsGetImageFromCurrentImageContext();
+  UIGraphicsEndImageContext();
+  return newImage;
+}
 %end
 
 %hook KSKKeyboardViewController // com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController
 - (void)viewDidAppear:(BOOL)arg1 {
   %orig;
-
-  NSString *backgroundImagePath = [[self sharedDefaults] objectForKey:@"KSKBackgroundImage"];
-  if (backgroundImagePath && ![backgroundImagePath isEqualToString:@""]) {
-    NSData *imageData = [NSData dataWithContentsOfFile:backgroundImagePath];
-    UIImage *backgroundImage = [UIImage imageWithData:imageData];
-    if (backgroundImagePath) {
-      UIImageView *backgroundImageView = [[[UIImageView alloc] initWithImage:backgroundImage] autorelease];
-      backgroundImageView.frame = [[self keyboardView] frame];
-      [[self keyboardView] addSubview:backgroundImageView];
-      [[self keyboardView] sendSubviewToBack:backgroundImageView];
-
-      // Adding overlay view over image view to darken the image
-      UIView *overlayView = [[[UIView alloc] initWithFrame:[[self keyboardView] frame]] autorelease];
-      overlayView.backgroundColor = [UIColor blackColor];
-      overlayView.alpha = 0.5;
-      [backgroundImageView addSubview:overlayView];
-    }
-  }
 
   // Pick the input view controller
   kbController = self;
