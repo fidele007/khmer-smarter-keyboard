@@ -12,7 +12,7 @@
 static UILabel *spaceCursorLabel;
 static UISwitch *spaceCursorSwitch;
 static UILabel *themeLabel;
-static UISwitch *themeSwitch;
+static UISegmentedControl *themeOption;
 static UIButton *themeButton;
 static UIButton *charThemeButton;
 
@@ -23,6 +23,13 @@ static UIButton *photoPickerButton;
 %hook KSKSettingsViewController //KhmerKeyboard.SettingViewController
 - (void)viewDidLayoutSubviews {
   %orig;
+
+  CGFloat superviewWidth = CGRectGetWidth([self view].frame);
+
+  // Update |spaceCursorSwitch| frame with orientation
+  CGRect spaceCursorSwitchFrame = [self zeroSpaceSwitcha].frame;
+  spaceCursorSwitchFrame.origin.y += CGRectGetHeight(spaceCursorSwitchFrame) + 10;
+  spaceCursorSwitch.frame = spaceCursorSwitchFrame;
 
   // Get ZWSPLabel's frame to calculate the next subviews below
   CGRect ZWSPLabelFrame;
@@ -36,45 +43,44 @@ static UIButton *photoPickerButton;
 
   // Update |spaceCursorLabel| frame with orientation
   if (!CGRectIsEmpty(ZWSPLabelFrame)) {
-    CGRect spaceCursorLabelFrame = ZWSPLabelFrame;
-    spaceCursorLabelFrame.origin.y += CGRectGetHeight(ZWSPLabelFrame) + 10;
-    spaceCursorLabelFrame.size.width += 30;
-    spaceCursorLabel.frame = spaceCursorLabelFrame;
+    spaceCursorLabel.frame = ZWSPLabelFrame;
+    [spaceCursorLabel sizeToFit];
+    spaceCursorLabel.center = CGPointMake(spaceCursorLabel.center.x, spaceCursorSwitch.center.y);
   }
-
-  // Update |spaceCursorSwitch| frame with orientation
-  CGRect spaceCursorSwitchFrame = [self zeroSpaceSwitcha].frame;
-  spaceCursorSwitchFrame.origin.y += CGRectGetHeight(spaceCursorSwitchFrame) + 10;
-  spaceCursorSwitch.frame = spaceCursorSwitchFrame;
 
   // Update |themeLabel| frame with orientation
   CGRect themeLabelFrame = spaceCursorLabel.frame;
-  themeLabelFrame.origin.y += CGRectGetHeight(themeLabelFrame) + 10;
+  themeLabelFrame.origin.y += CGRectGetHeight(themeLabelFrame) + 20;
   themeLabel.frame = themeLabelFrame;
+  [themeLabel sizeToFit];
+  themeLabel.center = CGPointMake(superviewWidth/2.0, themeLabel.center.y);
 
-  // Update |themeSwitch| frame with orientation
-  CGRect themeSwitchFrame = spaceCursorSwitchFrame;
-  themeSwitchFrame.origin.y += CGRectGetHeight(themeSwitchFrame) + 10;
-  themeSwitch.frame = themeSwitchFrame;
+  // Update |themeOption| frame with orientation
+  CGRect themeOptionFrame = spaceCursorLabel.frame;
+  themeOptionFrame.origin.y += CGRectGetHeight(themeOptionFrame) + 50;
+  themeOptionFrame.size.width = superviewWidth/1.2;
+  themeOptionFrame.size.height *= 1.7;
+  themeOption.frame = themeOptionFrame;
+  themeOption.center = CGPointMake(superviewWidth/2.0, themeOption.center.y);
+
+  // Update |charThemeButton| frame with orientation
+  CGRect charThemeButtonFrame = themeOptionFrame;
+  charThemeButtonFrame.origin.y += CGRectGetHeight(charThemeButtonFrame) + 15;
+  charThemeButton.frame = charThemeButtonFrame;
+  [charThemeButton sizeToFit];
+  charThemeButton.center = CGPointMake(superviewWidth/2.0, charThemeButton.center.y);
 
   // Update |themeButton| frame with orientation
-  CGRect themeButtonFrame = themeLabelFrame;
-  themeButtonFrame.origin.x += 20;
+  CGRect themeButtonFrame = charThemeButtonFrame;
   themeButtonFrame.origin.y += CGRectGetHeight(themeButtonFrame) + 5;
   themeButton.frame = themeButtonFrame;
   [themeButton sizeToFit];
-
-  // Update |charThemeButton| frame with orientation
-  CGRect charThemeButtonFrame = themeButtonFrame;
-  charThemeButtonFrame.origin.y += CGRectGetHeight(charThemeButtonFrame);
-  charThemeButton.frame = charThemeButtonFrame;
-  [charThemeButton sizeToFit];
+  themeButton.center = CGPointMake(superviewWidth/2.0, themeButton.center.y);
 
   // Update |photoPickerButton| frame with orientation
-  CGRect photoPickerButtonFrame = charThemeButtonFrame;
-  photoPickerButtonFrame.origin.y += CGRectGetHeight(photoPickerButtonFrame) + 20;
-  photoPickerButton.frame = photoPickerButtonFrame;
+  photoPickerButton.frame = themeButtonFrame;
   [photoPickerButton sizeToFit];
+  photoPickerButton.center = CGPointMake(superviewWidth/2.0, photoPickerButton.center.y);
 }
 
 - (void)viewDidLoad {
@@ -99,19 +105,18 @@ static UIButton *photoPickerButton;
               forControlEvents:UIControlEventValueChanged];
   [[self view] addSubview:spaceCursorSwitch];
 
-  // Create |themeLabel|
   themeLabel = [[[UILabel alloc] init] autorelease];
-  themeLabel.text = @"ប្រើ​ពណ៌​សម្រាប់​ក្ដារ​ចុច";
+  themeLabel.text = @"--Theme--";
   [[self view] addSubview:themeLabel];
 
-  // Create |themeSwitch|
-  themeSwitch = [[[UISwitch alloc] init] autorelease];
-  BOOL isThemeEnabled = [[self mySharedDefaults] boolForKey:@"isThemeEnabled"];
-  [themeSwitch setOn:isThemeEnabled];
-  [themeSwitch addTarget:self
-                  action:@selector(themeSwitchStateChanged:)
+  // Create theme segemented control
+  NSArray *themeArray = @[@"ទេ", @"ពណ៌", @"រូបភាព"];
+  themeOption = [[[UISegmentedControl alloc] initWithItems:themeArray] autorelease];
+  [themeOption addTarget:self
+                  action:@selector(themeOptionChanged:)
         forControlEvents:UIControlEventValueChanged];
-  [[self view] addSubview:themeSwitch];
+  themeOption.selectedSegmentIndex = [[self mySharedDefaults] integerForKey:@"KSKSelectedThemeOption"] ?: 0;
+  [[self view] addSubview:themeOption];
 
   // Theme button for choosing keyboard's background color
   /* UIButton created with  +buttonWithType: returns an autorelease object, so there is no need
@@ -130,11 +135,6 @@ static UIButton *photoPickerButton;
             forControlEvents:UIControlEventTouchUpInside];
   [[self view] addSubview:charThemeButton];
 
-  if (!isThemeEnabled) {
-    themeButton.alpha = 0;
-    charThemeButton.alpha = 0;
-  }
-
   // Photo picker button
   photoPickerButton = [UIButton buttonWithType:UIButtonTypeSystem];
   [photoPickerButton setTitle:@"ជ្រើស​រើស​រូប​ផៃ្ទខាង​ក្រោយ" forState:UIControlStateNormal];
@@ -143,6 +143,16 @@ static UIButton *photoPickerButton;
               forControlEvents:UIControlEventTouchUpInside];
   [[self view] addSubview:photoPickerButton];
 
+  NSInteger themeOption = [[self mySharedDefaults] integerForKey:@"KSKSelectedThemeOption"];
+  if (themeOption == 0) {
+    themeButton.hidden = YES;
+    photoPickerButton.hidden = YES;
+    charThemeButton.hidden = YES;
+  } else if (themeOption == 1) {
+    photoPickerButton.hidden = YES;
+  } else if (themeOption == 2) {
+    themeButton.hidden = YES;
+  }
 }
 
 - (void)setZeroSpaceSwitcha:(UISwitch *)zeroSpaceSwitch {
@@ -150,6 +160,28 @@ static UIButton *photoPickerButton;
   [zeroSpaceSwitch addTarget:self
                       action:@selector(zeroSpaceStateChanged:)
             forControlEvents:UIControlEventValueChanged];
+}
+
+%new
+- (void)themeOptionChanged:(UISegmentedControl *)control {
+  [[self mySharedDefaults] setInteger:control.selectedSegmentIndex forKey:@"KSKSelectedThemeOption"];
+  switch(control.selectedSegmentIndex) {
+    case 0:
+      themeButton.hidden = YES;
+      photoPickerButton.hidden = YES;
+      charThemeButton.hidden = YES;
+      break;
+    case 1:
+      themeButton.hidden = NO;
+      photoPickerButton.hidden = YES;
+      charThemeButton.hidden = NO;
+      break;
+    case 2:
+      themeButton.hidden = YES;
+      photoPickerButton.hidden = NO;
+      charThemeButton.hidden = NO;
+      break;
+  }
 }
 
 %new
@@ -220,21 +252,6 @@ static UIButton *photoPickerButton;
                                     forKey:@"keyboardBackgroundColor"];
         [[self mySharedDefaults] synchronize];
       }];
-}
-
-%new
-- (void)themeSwitchStateChanged:(UISwitch *)themeSwitch {
-  HBLogDebug(@"Setting ThemeOption to %d", themeSwitch.on);
-  [[self mySharedDefaults] setObject:[NSNumber numberWithBool:themeSwitch.on]
-                              forKey:@"isThemeEnabled"];
-  [[self mySharedDefaults] synchronize];
-  if (themeSwitch.on) {
-    [self animateView:themeButton withAlpha:1.0 duration:0.5];
-    [self animateView:charThemeButton withAlpha:1.0 duration:0.5];
-  } else {
-    [self animateView:themeButton withAlpha:0 duration:0.5];
-    [self animateView:charThemeButton withAlpha:0 duration:0.5];
-  }
 }
 
 %new

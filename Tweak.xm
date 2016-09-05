@@ -96,7 +96,12 @@ static CGPoint lastTranslatedPoint;
   if (!kbController) {
     return;
   }
-  
+
+  NSInteger themeOption = [[kbController sharedDefaults] integerForKey:@"KSKSelectedThemeOption"];
+  if (themeOption != 2) {
+    return;
+  }
+
   NSString *backgroundImagePath = [[kbController sharedDefaults] objectForKey:@"KSKBackgroundImage"];
   CGFloat overlayAlpha = [[kbController sharedDefaults] floatForKey:@"KSKBackgroundAlpha"] ?: 0;
   if (backgroundImagePath && ![backgroundImagePath isEqualToString:@""]) {
@@ -172,15 +177,20 @@ static CGPoint lastTranslatedPoint;
     [spaceBarSwipeGesture release];
   }
 
-  // Keyboard Theme
-  BOOL isThemeEnabled = [[self sharedDefaults] boolForKey:@"isThemeEnabled"];
-  if (isThemeEnabled) {
-    NSString *kbBackgroundColorHex = [[self sharedDefaults] objectForKey:@"keyboardBackgroundColor"];
-    NSString *kbForegroundColorHex = [[self sharedDefaults] objectForKey:@"keyboardForegroundColor"];
-    UIColor *kbBackgroundColor = LCPParseColorString(kbBackgroundColorHex, @"#1E4679");
-    UIColor *kbForegroundColor = LCPParseColorString(kbForegroundColorHex, @"#FFFFFF");
-    [self applyThemeColor:kbBackgroundColor foregroundColor:kbForegroundColor];
+  // Color Keyboard Theme
+  NSInteger themeOption = [[self sharedDefaults] integerForKey:@"KSKSelectedThemeOption"];
+  if (themeOption == 0) {
+    return;
   }
+
+  NSString *kbBackgroundColorHex = [[self sharedDefaults] objectForKey:@"keyboardBackgroundColor"];
+  NSString *kbForegroundColorHex = [[self sharedDefaults] objectForKey:@"keyboardForegroundColor"];
+  UIColor *kbBackgroundColor = LCPParseColorString(kbBackgroundColorHex, @"#1E4679");
+  UIColor *kbForegroundColor = LCPParseColorString(kbForegroundColorHex, @"#FFFFFF");
+  if (themeOption == 2) {
+    kbBackgroundColor = [UIColor clearColor];
+  }
+  [self applyThemeColor:kbBackgroundColor foregroundColor:kbForegroundColor];
 
   /*
   // Try solving the long pressing delete button bug, but this does not solve it.
