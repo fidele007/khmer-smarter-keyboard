@@ -1,7 +1,7 @@
 Package: com.fidele007.khmersmarterkeyboard
 Name: Khmer Smarter Keyboard
 Depends: mobilesubstrate, org.thebigboss.libcolorpicker
-Version: 1.1
+Version: 1.2
 Architecture: iphoneos-arm
 Description: Various improvements on Khmer Smart Keyboard.
 Depiction: http://fidele007.github.io/depictions/?p=com.fidele007.khmersmarterkeyboard
