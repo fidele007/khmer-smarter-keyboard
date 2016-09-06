@@ -34,25 +34,42 @@
 }
 
 - (void)addScrollableImage {
-  self.scrollView = [[[UIScrollView alloc] initWithFrame:self.cropRectangle.frame] autorelease];
-  self.scrollView.maximumZoomScale = 6.0;
+  self.scrollView = [[[UIScrollView alloc] initWithFrame:self.view.bounds] autorelease];
   // self.scrollView.clipsToBounds = NO;
+  // self.scrollView.minimumZoomScale = 0.5;
+  self.scrollView.maximumZoomScale = 6.0;
   self.scrollView.delegate = self;
 
-  CGRect scrollViewFrame = self.scrollView.frame;
   self.imageView = [[[UIImageView alloc] init] autorelease];
-  self.imageView.frame = CGRectMake(0, 0, CGRectGetWidth(scrollViewFrame), CGRectGetHeight(scrollViewFrame));
-  self.imageView.contentMode = UIViewContentModeScaleAspectFill;
+  CGRect imageViewFrame = self.cropRectangle.frame;
+  CGFloat imageViewHeight = _importedImage.size.height * CGRectGetWidth(imageViewFrame)/_importedImage.size.width;
+  self.imageView.frame = CGRectMake(0, 0, CGRectGetWidth(self.view.bounds), imageViewHeight);
   self.imageView.image = [self importedImage];
+
+  self.scrollView.contentSize = self.imageView.bounds.size;
+  self.scrollView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 
   [self.scrollView addSubview:self.imageView];
   [self.view addSubview:self.scrollView];
   [self.view sendSubviewToBack:self.scrollView];
+
+  [self setContentInset];
 }
 
 // Set what imageView will be zoomed in reponse to zoom gestures
 - (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView {
   return self.imageView;
+}
+
+- (void)scrollViewDidZoom:(id)scrollView {
+  [self setContentInset];
+}
+
+- (void)setContentInset {
+  CGRect cropRectangleFrame = self.cropRectangle.frame;
+  CGFloat topPadding = CGRectGetMinY(cropRectangleFrame);
+  CGFloat bottomPadding = CGRectGetHeight(self.view.bounds) - CGRectGetMinY(cropRectangleFrame) - CGRectGetHeight(cropRectangleFrame);
+  self.scrollView.contentInset = UIEdgeInsetsMake(topPadding, 0, bottomPadding, 0);
 }
 
 - (void)addCropRectangle {
