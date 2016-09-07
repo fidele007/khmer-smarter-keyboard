@@ -91,7 +91,7 @@ static CGPoint lastTranslatedPoint;
 
 - (void)layoutSubviews {
   %orig;
-
+  
   // Keyboard's background image
   if (!kbController) {
     return;
@@ -107,10 +107,11 @@ static CGPoint lastTranslatedPoint;
   if (backgroundImagePath && ![backgroundImagePath isEqualToString:@""]) {
     NSData *imageData = [NSData dataWithContentsOfFile:backgroundImagePath];
     UIImage *backgroundImage = [UIImage imageWithData:imageData];
-    UIImage *scaledImage = [self imageWithImage:backgroundImage scaledToSize:[self frame].size];
+    // UIImage *scaledImage = [self imageWithImage:backgroundImage scaledToSize:[self frame].size];
     if (backgroundImage) {
-      UIImageView *backgroundImageView = [[[UIImageView alloc] initWithImage:scaledImage] autorelease];
-      backgroundImageView.frame = [self frame];
+      UIImageView *backgroundImageView = [[[UIImageView alloc] initWithFrame:[self frame]] autorelease];
+      backgroundImageView.contentMode = UIViewContentModeScaleAspectFill;
+      backgroundImageView.image = backgroundImage;
       [self addSubview:backgroundImageView];
       [self sendSubviewToBack:backgroundImageView];
 
