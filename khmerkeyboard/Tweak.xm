@@ -409,6 +409,18 @@ static UIView *overlayView;
                       action:@selector(overlaySliderValueChanged:)
             forControlEvents:UIControlEventValueChanged];
     overlaySlider.maximumValue = 0.9;
+
+    // Add underlay for slider to prevent conflict with moving image and moving slider
+    UIView *sliderUnderlay = [[[UIView alloc] init] autorelease];
+    sliderUnderlay.backgroundColor = [UIColor clearColor];
+    CGRect sliderUnderlayFrame = overlaySlider.frame;
+    sliderUnderlayFrame.origin.x -= 20;
+    sliderUnderlayFrame.origin.y -= 20;
+    sliderUnderlayFrame.size.width += 40;
+    sliderUnderlayFrame.size.height += 40;
+    sliderUnderlay.frame = sliderUnderlayFrame;
+
+    [imgViewController.view addSubview:sliderUnderlay];
     [imgViewController.view addSubview:overlaySlider];
 
     UILabel *sliderLabel = [[[UILabel alloc] init] autorelease];
