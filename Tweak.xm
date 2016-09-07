@@ -38,6 +38,7 @@
 @interface KSKKeyboardView : UIView // com_vanna_KhmerKeyboard_Keyboard.KeyboardView
 @property (retain,nonatomic) KSKSpaceButton *spaceButton; 
 - (void)setSpaceButton:(KSKSpaceButton *)spaceButton;
+- (UIImage *)imageWithImage:(UIImage *)image scaledToSize:(CGSize)newSize;
 @end
 
 @interface KSKKeyboardViewController : UIInputViewController // com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController
@@ -87,6 +88,50 @@ static CGPoint lastTranslatedPoint;
     [self changeToNextLanguage];
   }
 }
+
+- (void)layoutSubviews {
+  %orig;
+  
+  // Keyboard's background image
+  if (!kbController) {
+    return;
+  }
+
+  NSInteger themeOption = [[kbController sharedDefaults] integerForKey:@"KSKSelectedThemeOption"];
+  if (themeOption != 2) {
+    return;
+  }
+
+  NSString *backgroundImagePath = [[kbController sharedDefaults] objectForKey:@"KSKBackgroundImage"];
+  CGFloat overlayAlpha = [[kbController sharedDefaults] floatForKey:@"KSKBackgroundAlpha"] ?: 0;
+  if (backgroundImagePath && ![backgroundImagePath isEqualToString:@""]) {
+    NSData *imageData = [NSData dataWithContentsOfFile:backgroundImagePath];
+    UIImage *backgroundImage = [UIImage imageWithData:imageData];
+    // UIImage *scaledImage = [self imageWithImage:backgroundImage scaledToSize:[self frame].size];
+    if (backgroundImage) {
+      UIImageView *backgroundImageView = [[[UIImageView alloc] initWithFrame:[self frame]] autorelease];
+      backgroundImageView.contentMode = UIViewContentModeScaleAspectFill;
+      backgroundImageView.image = backgroundImage;
+      [self addSubview:backgroundImageView];
+      [self sendSubviewToBack:backgroundImageView];
+
+      // Adding overlay view over image view to darken the image
+      UIView *overlayView = [[[UIView alloc] initWithFrame:[self frame]] autorelease];
+      overlayView.backgroundColor = [UIColor blackColor];
+      overlayView.alpha = overlayAlpha;
+      [backgroundImageView addSubview:overlayView];
+    }
+  }
+}
+
+%new
+- (UIImage *)imageWithImage:(UIImage *)image scaledToSize:(CGSize)newSize {
+  UIGraphicsBeginImageContext(newSize);
+  [image drawInRect:CGRectMake(0, 0, newSize.width, newSize.height)];
+  UIImage *newImage = UIGraphicsGetImageFromCurrentImageContext();
+  UIGraphicsEndImageContext();
+  return newImage;
+}
 %end
 
 %hook KSKKeyboardViewController // com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController
@@ -133,15 +178,20 @@ static CGPoint lastTranslatedPoint;
     [spaceBarSwipeGesture release];
   }
 
-  // Keyboard Theme
-  BOOL isThemeEnabled = [[self sharedDefaults] boolForKey:@"isThemeEnabled"];
-  if (isThemeEnabled) {
-    NSString *kbBackgroundColorHex = [[self sharedDefaults] objectForKey:@"keyboardBackgroundColor"];
-    NSString *kbForegroundColorHex = [[self sharedDefaults] objectForKey:@"keyboardForegroundColor"];
-    UIColor *kbBackgroundColor = LCPParseColorString(kbBackgroundColorHex, @"#1E4679");
-    UIColor *kbForegroundColor = LCPParseColorString(kbForegroundColorHex, @"#FFFFFF");
-    [self applyThemeColor:kbBackgroundColor foregroundColor:kbForegroundColor];
+  // Color Keyboard Theme
+  NSInteger themeOption = [[self sharedDefaults] integerForKey:@"KSKSelectedThemeOption"];
+  if (themeOption == 0) {
+    return;
   }
+
+  NSString *kbBackgroundColorHex = [[self sharedDefaults] objectForKey:@"keyboardBackgroundColor"];
+  NSString *kbForegroundColorHex = [[self sharedDefaults] objectForKey:@"keyboardForegroundColor"];
+  UIColor *kbBackgroundColor = LCPParseColorString(kbBackgroundColorHex, @"#1E4679");
+  UIColor *kbForegroundColor = LCPParseColorString(kbForegroundColorHex, @"#FFFFFF");
+  if (themeOption == 2) {
+    kbBackgroundColor = [UIColor clearColor];
+  }
+  [self applyThemeColor:kbBackgroundColor foregroundColor:kbForegroundColor];
 
   /*
   // Try solving the long pressing delete button bug, but this does not solve it.

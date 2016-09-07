@@ -1,4 +1,9 @@
-#include <libcolorpicker.h>
+#import <libcolorpicker.h>
+#import <KSKImageCropper.h>
+
+@interface UIViewController (KhmerSmarterKeyboard)
+- (NSUserDefaults *)mySharedDefaults;
+@end
 
 @interface KSKSettingsViewController : UIViewController //KhmerKeyboard.SettingViewController
 @property (retain,nonatomic) NSUserDefaults * mySharedDefaults;
@@ -9,16 +14,67 @@
 - (void)animateView:(UIView *)view withAlpha:(CGFloat)alpha duration:(CGFloat)duration;
 @end
 
+@interface PLCropOverlayCropView : UIView {
+  CGRect _cropRect;
+}
+- (CGRect)cropRect;
+- (void)setCropRect:(CGRect)arg1 ;
+- (void)drawRect:(CGRect)arg1 ;
+- (void)setFrame:(CGRect)arg1 ;
+@end
+
+@interface PLCropOverlayBottomBar : UIView
+@end
+
+@interface PLCropOverlay : UIView {
+  PLCropOverlayCropView* _cropView;
+}
+@property (nonatomic,readonly) PLCropOverlayBottomBar *_bottomBar;
+- (CGRect)cropRect;
+- (void)_updateCropRectInRect:(CGRect)arg1 ;
+- (void)setOKButtonTitle:(id)arg1 ;
+- (void)setCancelButtonTitle:(id)arg1 ;
+@end
+
+@interface PLPhotoTileViewController : UIViewController
+- (id)expandableImageView;
+- (UIScrollView *)scrollView;
+@end
+
+@interface PUUIImageViewController : UIViewController {
+  PLPhotoTileViewController* _imageTile;
+}
+- (id)initWithUIImage:(id)arg1 cropRect:(CGRect)arg2 ;
+- (PLCropOverlay *)cropOverlay;
+@end
+
+
 static UILabel *spaceCursorLabel;
 static UISwitch *spaceCursorSwitch;
 static UILabel *themeLabel;
-static UISwitch *themeSwitch;
+static UISegmentedControl *themeOption;
 static UIButton *themeButton;
 static UIButton *charThemeButton;
+
+static UIImagePickerController *ipc;
+static UIPopoverController *popover;
+static UIButton *photoPickerButton;
+
+static UISlider *overlaySlider;
+static UIView *overlayView;
+
+// static KSKImageCropper *imageCropper;
 
 %hook KSKSettingsViewController //KhmerKeyboard.SettingViewController
 - (void)viewDidLayoutSubviews {
   %orig;
+
+  CGFloat superviewWidth = CGRectGetWidth([self view].frame);
+
+  // Update |spaceCursorSwitch| frame with orientation
+  CGRect spaceCursorSwitchFrame = [self zeroSpaceSwitcha].frame;
+  spaceCursorSwitchFrame.origin.y += CGRectGetHeight(spaceCursorSwitchFrame) + 10;
+  spaceCursorSwitch.frame = spaceCursorSwitchFrame;
 
   // Get ZWSPLabel's frame to calculate the next subviews below
   CGRect ZWSPLabelFrame;
@@ -32,39 +88,44 @@ static UIButton *charThemeButton;
 
   // Update |spaceCursorLabel| frame with orientation
   if (!CGRectIsEmpty(ZWSPLabelFrame)) {
-    CGRect spaceCursorLabelFrame = ZWSPLabelFrame;
-    spaceCursorLabelFrame.origin.y += CGRectGetHeight(ZWSPLabelFrame) + 10;
-    spaceCursorLabelFrame.size.width += 30;
-    spaceCursorLabel.frame = spaceCursorLabelFrame;
+    spaceCursorLabel.frame = ZWSPLabelFrame;
+    [spaceCursorLabel sizeToFit];
+    spaceCursorLabel.center = CGPointMake(spaceCursorLabel.center.x, spaceCursorSwitch.center.y);
   }
-
-  // Update |spaceCursorSwitch| frame with orientation
-  CGRect spaceCursorSwitchFrame = [self zeroSpaceSwitcha].frame;
-  spaceCursorSwitchFrame.origin.y += CGRectGetHeight(spaceCursorSwitchFrame) + 10;
-  spaceCursorSwitch.frame = spaceCursorSwitchFrame;
 
   // Update |themeLabel| frame with orientation
   CGRect themeLabelFrame = spaceCursorLabel.frame;
-  themeLabelFrame.origin.y += CGRectGetHeight(themeLabelFrame) + 10;
+  themeLabelFrame.origin.y += CGRectGetHeight(themeLabelFrame) + 20;
   themeLabel.frame = themeLabelFrame;
+  [themeLabel sizeToFit];
+  themeLabel.center = CGPointMake(superviewWidth/2.0, themeLabel.center.y);
 
-  // Update |themeSwitch| frame with orientation
-  CGRect themeSwitchFrame = spaceCursorSwitchFrame;
-  themeSwitchFrame.origin.y += CGRectGetHeight(themeSwitchFrame) + 10;
-  themeSwitch.frame = themeSwitchFrame;
+  // Update |themeOption| frame with orientation
+  CGRect themeOptionFrame = spaceCursorLabel.frame;
+  themeOptionFrame.origin.y += CGRectGetHeight(themeOptionFrame) + 50;
+  themeOptionFrame.size.width = superviewWidth/1.2;
+  themeOptionFrame.size.height *= 1.7;
+  themeOption.frame = themeOptionFrame;
+  themeOption.center = CGPointMake(superviewWidth/2.0, themeOption.center.y);
+
+  // Update |charThemeButton| frame with orientation
+  CGRect charThemeButtonFrame = themeOptionFrame;
+  charThemeButtonFrame.origin.y += CGRectGetHeight(charThemeButtonFrame) + 15;
+  charThemeButton.frame = charThemeButtonFrame;
+  [charThemeButton sizeToFit];
+  charThemeButton.center = CGPointMake(superviewWidth/2.0, charThemeButton.center.y);
 
   // Update |themeButton| frame with orientation
-  CGRect themeButtonFrame = themeLabelFrame;
-  themeButtonFrame.origin.x += 20;
+  CGRect themeButtonFrame = charThemeButtonFrame;
   themeButtonFrame.origin.y += CGRectGetHeight(themeButtonFrame) + 5;
   themeButton.frame = themeButtonFrame;
   [themeButton sizeToFit];
+  themeButton.center = CGPointMake(superviewWidth/2.0, themeButton.center.y);
 
-  // Update |charThemeButton| frame with orientation
-  CGRect charThemeButtonFrame = themeButtonFrame;
-  charThemeButtonFrame.origin.y += CGRectGetHeight(charThemeButtonFrame);
-  charThemeButton.frame = charThemeButtonFrame;
-  [charThemeButton sizeToFit];
+  // Update |photoPickerButton| frame with orientation
+  photoPickerButton.frame = themeButtonFrame;
+  [photoPickerButton sizeToFit];
+  photoPickerButton.center = CGPointMake(superviewWidth/2.0, photoPickerButton.center.y);
 }
 
 - (void)viewDidLoad {
@@ -72,7 +133,6 @@ static UIButton *charThemeButton;
 
   // Set initial state of ZWSP switch according to its preferences
   BOOL isZWSPEnabled = [[self mySharedDefaults] boolForKey:@"isZWSPEnabled"];
-  HBLogDebug(@"isZWSPEnabled: %d", isZWSPEnabled);
   [[self zeroSpaceSwitcha] setOn:isZWSPEnabled];
 
   // Create |spaceCursorLabel|
@@ -89,19 +149,18 @@ static UIButton *charThemeButton;
               forControlEvents:UIControlEventValueChanged];
   [[self view] addSubview:spaceCursorSwitch];
 
-  // Create |themeLabel|
   themeLabel = [[[UILabel alloc] init] autorelease];
-  themeLabel.text = @"ប្រើ​ពណ៌​សម្រាប់​ក្ដារ​ចុច";
+  themeLabel.text = @"--Theme--";
   [[self view] addSubview:themeLabel];
 
-  // Create |themeSwitch|
-  themeSwitch = [[[UISwitch alloc] init] autorelease];
-  BOOL isThemeEnabled = [[self mySharedDefaults] boolForKey:@"isThemeEnabled"];
-  [themeSwitch setOn:isThemeEnabled];
-  [themeSwitch addTarget:self
-                  action:@selector(themeSwitchStateChanged:)
+  // Create theme segemented control
+  NSArray *themeArray = @[@"ទេ", @"ពណ៌", @"រូបភាព"];
+  themeOption = [[[UISegmentedControl alloc] initWithItems:themeArray] autorelease];
+  [themeOption addTarget:self
+                  action:@selector(themeOptionChanged:)
         forControlEvents:UIControlEventValueChanged];
-  [[self view] addSubview:themeSwitch];
+  themeOption.selectedSegmentIndex = [[self mySharedDefaults] integerForKey:@"KSKSelectedThemeOption"] ?: 0;
+  [[self view] addSubview:themeOption];
 
   // Theme button for choosing keyboard's background color
   /* UIButton created with  +buttonWithType: returns an autorelease object, so there is no need
@@ -120,9 +179,23 @@ static UIButton *charThemeButton;
             forControlEvents:UIControlEventTouchUpInside];
   [[self view] addSubview:charThemeButton];
 
-  if (!isThemeEnabled) {
-    themeButton.alpha = 0;
-    charThemeButton.alpha = 0;
+  // Photo picker button
+  photoPickerButton = [UIButton buttonWithType:UIButtonTypeSystem];
+  [photoPickerButton setTitle:@"ជ្រើស​រើស​រូប​ផៃ្ទខាង​ក្រោយ" forState:UIControlStateNormal];
+  [photoPickerButton addTarget:self
+                        action:@selector(photoPickerButtonPressed:)
+              forControlEvents:UIControlEventTouchUpInside];
+  [[self view] addSubview:photoPickerButton];
+
+  NSInteger themeOption = [[self mySharedDefaults] integerForKey:@"KSKSelectedThemeOption"];
+  if (themeOption == 0) {
+    themeButton.hidden = YES;
+    photoPickerButton.hidden = YES;
+    charThemeButton.hidden = YES;
+  } else if (themeOption == 1) {
+    photoPickerButton.hidden = YES;
+  } else if (themeOption == 2) {
+    themeButton.hidden = YES;
   }
 }
 
@@ -131,6 +204,92 @@ static UIButton *charThemeButton;
   [zeroSpaceSwitch addTarget:self
                       action:@selector(zeroSpaceStateChanged:)
             forControlEvents:UIControlEventValueChanged];
+}
+
+%new
+- (void)themeOptionChanged:(UISegmentedControl *)control {
+  [[self mySharedDefaults] setInteger:control.selectedSegmentIndex forKey:@"KSKSelectedThemeOption"];
+  switch(control.selectedSegmentIndex) {
+    case 0:
+      themeButton.hidden = YES;
+      photoPickerButton.hidden = YES;
+      charThemeButton.hidden = YES;
+      break;
+    case 1:
+      themeButton.hidden = NO;
+      photoPickerButton.hidden = YES;
+      charThemeButton.hidden = NO;
+      break;
+    case 2:
+      themeButton.hidden = YES;
+      photoPickerButton.hidden = NO;
+      charThemeButton.hidden = NO;
+      break;
+  }
+}
+
+%new
+- (void)imagePickerController:(UIImagePickerController *)picker
+      didFinishPickingMediaWithInfo:(NSDictionary *)info {
+
+  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) {
+    [ipc dismissViewControllerAnimated:NO completion:nil];
+  } else {
+    [popover dismissPopoverAnimated:NO];
+  }
+  UIImage *pickedImage = [info objectForKey:UIImagePickerControllerEditedImage];
+  NSData *imageData = UIImageJPEGRepresentation(pickedImage, 0.9f);
+  NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+  NSString *documentsDirectory = [paths firstObject];
+  NSString *fileName = [NSString stringWithFormat:@"%@/keyboardBackgroundImage.jpg", documentsDirectory];
+  [imageData writeToFile:fileName atomically:YES];
+  [[self mySharedDefaults] setObject:fileName forKey:@"KSKBackgroundImage"];
+  [[self mySharedDefaults] synchronize];
+
+  // UIImage *pickedImage = [info objectForKey:UIImagePickerControllerOriginalImage];
+  // imageCropper = [[[KSKImageCropper alloc] initWithImage:pickedImage] autorelease];
+  // imageCropper.delegate = self;
+  // [picker presentViewController:imageCropper animated:YES completion:nil];
+}
+
+// %new
+// - (void)imageCropper:(KSKImageCropper *)cropper didFinishCroppingImageWithResult:(UIImage *)image {
+//   [cropper dismissViewControllerAnimated:YES completion:nil];
+//   if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) {
+//     [ipc dismissViewControllerAnimated:NO completion:nil];
+//   } else {
+//     [popover dismissPopoverAnimated:NO];
+//   }
+
+//   // Show cropped image result
+//   UIImageView *croppedImageView = [[[UIImageView alloc] initWithImage:image] autorelease];
+//   CGFloat imageWidth = 300;
+//   CGFloat imageHeight = image.size.height * imageWidth/image.size.width;
+//   croppedImageView.frame = CGRectMake(0, 380, imageWidth, imageHeight);
+//   croppedImageView.center = CGPointMake([self view].center.x, croppedImageView.center.y);
+//   [[self view] addSubview:croppedImageView];
+// }
+
+%new
+- (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker {
+  [picker dismissViewControllerAnimated:YES completion:nil];
+}
+
+%new
+- (void)photoPickerButtonPressed:(UIButton *)sender {
+  ipc = [[[UIImagePickerController alloc] init] autorelease];
+  ipc.delegate = self;
+  ipc.allowsEditing = YES;
+  ipc.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
+  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) {
+    [self presentViewController:ipc animated:YES completion:nil];
+  } else {
+    popover = [[[UIPopoverController alloc] initWithContentViewController:ipc] autorelease];
+    [popover presentPopoverFromRect:sender.frame
+                             inView:[self view]
+           permittedArrowDirections:UIPopoverArrowDirectionAny
+                           animated:YES];
+  }
 }
 
 %new
@@ -143,7 +302,8 @@ static UIButton *charThemeButton;
         NSString *hexString = [UIColor hexFromColor:pickedColor];
         hexString = [hexString stringByAppendingFormat:@":%f", pickedColor.alpha];
         [[self mySharedDefaults] setObject:hexString
-                              forKey:@"keyboardForegroundColor"];
+                                    forKey:@"keyboardForegroundColor"];
+        [[self mySharedDefaults] synchronize];
       }];
 }
 
@@ -157,36 +317,23 @@ static UIButton *charThemeButton;
         NSString *hexString = [UIColor hexFromColor:pickedColor];
         hexString = [hexString stringByAppendingFormat:@":%f", pickedColor.alpha];
         [[self mySharedDefaults] setObject:hexString
-                              forKey:@"keyboardBackgroundColor"];
+                                    forKey:@"keyboardBackgroundColor"];
+        [[self mySharedDefaults] synchronize];
       }];
 }
 
 %new
-- (void)themeSwitchStateChanged:(UISwitch *)themeSwitch {
-  HBLogDebug(@"Setting ThemeOption to %d", themeSwitch.on);
-  [[self mySharedDefaults] setObject:[NSNumber numberWithBool:themeSwitch.on]
-                              forKey:@"isThemeEnabled"];
-  if (themeSwitch.on) {
-    [self animateView:themeButton withAlpha:1.0 duration:0.5];
-    [self animateView:charThemeButton withAlpha:1.0 duration:0.5];
-  } else {
-    [self animateView:themeButton withAlpha:0 duration:0.5];
-    [self animateView:charThemeButton withAlpha:0 duration:0.5];
-  }
-}
-
-%new
 - (void)zeroSpaceStateChanged:(UISwitch *)zeroSpaceSwitch {
-  HBLogDebug(@"Setting ZWSP to %d", zeroSpaceSwitch.on);
   [[self mySharedDefaults] setObject:[NSNumber numberWithBool:zeroSpaceSwitch.on]
                               forKey:@"isZWSPEnabled"];
+  [[self mySharedDefaults] synchronize];
 }
 
 %new
 - (void)spaceCursorStateChanged:(UISwitch *)spaceCursorSwitch {
-  HBLogDebug(@"Setting SpaceCursor to %d", spaceCursorSwitch.on);
   [[self mySharedDefaults] setObject:[NSNumber numberWithBool:spaceCursorSwitch.on]
                               forKey:@"isSpaceCursorEnabled"];
+  [[self mySharedDefaults] synchronize];
 }
 
 %new
@@ -220,6 +367,86 @@ static UIButton *charThemeButton;
   }
 }
 %end
+%end
+
+%hook UIImagePickerController
+- (void)_layoutViewController:(UIViewController *)viewController {
+  %orig;
+  if ([viewController isKindOfClass:%c(PUUIImageViewController)]) {
+    PUUIImageViewController *imgViewController = (PUUIImageViewController *)viewController;
+    PLCropOverlay *cropOverlay = [imgViewController cropOverlay];
+    PLCropOverlayCropView *cropOverlayView = MSHookIvar<PLCropOverlayCropView *>(cropOverlay, "_cropView");
+
+    CGFloat keyboardRatio = 250.0/375.0;
+    CGRect newCropRect = MSHookIvar<CGRect>(cropOverlay, "_cropRect");
+    CGFloat newHeight = CGRectGetWidth(newCropRect) * keyboardRatio;
+    CGFloat heightDifference = newCropRect.size.height - newHeight;
+    newCropRect.size.height = newHeight;
+    newCropRect.origin.y += heightDifference/2.0;
+
+    // Change crop rect
+    MSHookIvar<CGRect>(cropOverlay, "_cropRect") = newCropRect;
+
+    // Change crop rect view
+    [cropOverlayView setCropRect:newCropRect];
+
+    // Adjust content inset of UIScrollView to enable more image scrolling
+    CGFloat topPadding = CGRectGetMinY(newCropRect);
+    CGFloat bottomPadding = CGRectGetHeight(imgViewController.view.frame) - CGRectGetMinY(newCropRect) - CGRectGetHeight(newCropRect);;
+    PLPhotoTileViewController *photoViewController = MSHookIvar<PLPhotoTileViewController *>(imgViewController, "_imageTile");
+    [photoViewController scrollView].contentInset = UIEdgeInsetsMake(topPadding, 0, bottomPadding, 0);
+
+    // Change OK and Cancel button titles
+    [cropOverlay setOKButtonTitle:@"រក្សាទុក"];
+    [cropOverlay setCancelButtonTitle:@"បោះបង់"];
+
+    // Add image overlay (slider, label and overlay view)
+    overlaySlider = [[[UISlider alloc] init] autorelease];
+    overlaySlider.frame = CGRectMake(0, 0, CGRectGetWidth(imgViewController.view.frame)/1.5, 10);
+    CGFloat sliderY = CGRectGetMinY(cropOverlay._bottomBar.frame) - 30;
+    overlaySlider.center = CGPointMake(imgViewController.view.center.x, sliderY);
+    [overlaySlider addTarget:self
+                      action:@selector(overlaySliderValueChanged:)
+            forControlEvents:UIControlEventValueChanged];
+    overlaySlider.maximumValue = 0.9;
+
+    // Add underlay for slider to prevent conflict with moving image and moving slider
+    UIView *sliderUnderlay = [[[UIView alloc] init] autorelease];
+    sliderUnderlay.backgroundColor = [UIColor clearColor];
+    CGRect sliderUnderlayFrame = overlaySlider.frame;
+    sliderUnderlayFrame.origin.x -= 20;
+    sliderUnderlayFrame.origin.y -= 20;
+    sliderUnderlayFrame.size.width += 40;
+    sliderUnderlayFrame.size.height += 40;
+    sliderUnderlay.frame = sliderUnderlayFrame;
+
+    [imgViewController.view addSubview:sliderUnderlay];
+    [imgViewController.view addSubview:overlaySlider];
+
+    UILabel *sliderLabel = [[[UILabel alloc] init] autorelease];
+    sliderLabel.text = @"ពន្លឺ";
+    sliderLabel.textColor = [UIColor whiteColor];
+    [sliderLabel sizeToFit];
+    sliderLabel.center = CGPointMake(overlaySlider.center.x, overlaySlider.center.y - 30);
+    [imgViewController.view addSubview:sliderLabel];
+
+    // Add overlay view for UIImageView
+    overlayView = [[[UIView alloc] initWithFrame:newCropRect] autorelease];
+    overlayView.backgroundColor = [UIColor blackColor];
+    overlayView.alpha = 0;
+    overlayView.userInteractionEnabled = NO;
+    [imgViewController.view addSubview:overlayView];
+  }
+}
+
+%new
+- (void)overlaySliderValueChanged:(UISlider *)slider {
+  overlayView.alpha = slider.value;
+  if ([[self presentingViewController] isKindOfClass:objc_getClass("KhmerKeyboard.SettingViewController")]) {
+    UIViewController *settingsViewController = [self presentingViewController];
+    [[settingsViewController mySharedDefaults] setFloat:overlaySlider.value forKey:@"KSKBackgroundAlpha"];
+  }
+}
 %end
 
 %ctor {
