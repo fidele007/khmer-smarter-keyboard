@@ -10,6 +10,37 @@
 - (void)animateView:(UIView *)view withAlpha:(CGFloat)alpha duration:(CGFloat)duration;
 @end
 
+@interface PLCropOverlayCropView : UIView {
+  CGRect _cropRect;
+}
+- (CGRect)cropRect;
+- (void)setCropRect:(CGRect)arg1 ;
+- (void)drawRect:(CGRect)arg1 ;
+- (void)setFrame:(CGRect)arg1 ;
+@end
+
+@interface PLCropOverlay : UIView {
+  PLCropOverlayCropView* _cropView;
+}
+- (CGRect)cropRect;
+- (void)_updateCropRectInRect:(CGRect)arg1 ;
+- (void)setOKButtonTitle:(id)arg1 ;
+- (void)setCancelButtonTitle:(id)arg1 ;
+@end
+
+@interface PLPhotoTileViewController : UIViewController
+- (id)expandableImageView;
+- (UIScrollView *)scrollView;
+@end
+
+@interface PUUIImageViewController : UIViewController {
+  PLPhotoTileViewController* _imageTile;
+}
+- (id)initWithUIImage:(id)arg1 cropRect:(CGRect)arg2 ;
+- (PLCropOverlay *)cropOverlay;
+@end
+
+
 static UILabel *spaceCursorLabel;
 static UISwitch *spaceCursorSwitch;
 static UILabel *themeLabel;
@@ -21,7 +52,7 @@ static UIImagePickerController *ipc;
 static UIPopoverController *popover;
 static UIButton *photoPickerButton;
 
-static KSKImageCropper *imageCropper;
+// static KSKImageCropper *imageCropper;
 
 %hook KSKSettingsViewController //KhmerKeyboard.SettingViewController
 - (void)viewDidLayoutSubviews {
@@ -190,37 +221,43 @@ static KSKImageCropper *imageCropper;
 - (void)imagePickerController:(UIImagePickerController *)picker
       didFinishPickingMediaWithInfo:(NSDictionary *)info {
 
-  UIImage *pickedImage = [info objectForKey:UIImagePickerControllerOriginalImage];
-  imageCropper = [[[KSKImageCropper alloc] initWithImage:pickedImage] autorelease];
-  imageCropper.delegate = self;
-  [picker presentViewController:imageCropper animated:YES completion:nil];
-
-  // NSData *imageData = UIImageJPEGRepresentation(pickedImage, 0.9f);
-  // NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-  // NSString *documentsDirectory = [paths firstObject];
-  // NSString *fileName = [NSString stringWithFormat:@"%@/keyboardBackgroundImage.jpg", documentsDirectory];
-  // [imageData writeToFile:fileName atomically:YES];
-  // [[self mySharedDefaults] setObject:fileName forKey:@"KSKBackgroundImage"];
-  // [[self mySharedDefaults] synchronize];
-}
-
-%new
-- (void)imageCropper:(KSKImageCropper *)cropper didFinishCroppingImageWithResult:(UIImage *)image {
-  [cropper dismissViewControllerAnimated:YES completion:nil];
   if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) {
     [ipc dismissViewControllerAnimated:NO completion:nil];
   } else {
     [popover dismissPopoverAnimated:NO];
   }
+  UIImage *pickedImage = [info objectForKey:UIImagePickerControllerEditedImage];
+  NSData *imageData = UIImageJPEGRepresentation(pickedImage, 0.9f);
+  NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+  NSString *documentsDirectory = [paths firstObject];
+  NSString *fileName = [NSString stringWithFormat:@"%@/keyboardBackgroundImage.jpg", documentsDirectory];
+  [imageData writeToFile:fileName atomically:YES];
+  [[self mySharedDefaults] setObject:fileName forKey:@"KSKBackgroundImage"];
+  [[self mySharedDefaults] synchronize];
 
-  // Show cropped image result
-  UIImageView *croppedImageView = [[[UIImageView alloc] initWithImage:image] autorelease];
-  CGFloat imageWidth = 300;
-  CGFloat imageHeight = image.size.height * imageWidth/image.size.width;
-  croppedImageView.frame = CGRectMake(0, 380, imageWidth, imageHeight);
-  croppedImageView.center = CGPointMake([self view].center.x, croppedImageView.center.y);
-  [[self view] addSubview:croppedImageView];
+  // UIImage *pickedImage = [info objectForKey:UIImagePickerControllerOriginalImage];
+  // imageCropper = [[[KSKImageCropper alloc] initWithImage:pickedImage] autorelease];
+  // imageCropper.delegate = self;
+  // [picker presentViewController:imageCropper animated:YES completion:nil];
 }
+
+// %new
+// - (void)imageCropper:(KSKImageCropper *)cropper didFinishCroppingImageWithResult:(UIImage *)image {
+//   [cropper dismissViewControllerAnimated:YES completion:nil];
+//   if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) {
+//     [ipc dismissViewControllerAnimated:NO completion:nil];
+//   } else {
+//     [popover dismissPopoverAnimated:NO];
+//   }
+
+//   // Show cropped image result
+//   UIImageView *croppedImageView = [[[UIImageView alloc] initWithImage:image] autorelease];
+//   CGFloat imageWidth = 300;
+//   CGFloat imageHeight = image.size.height * imageWidth/image.size.width;
+//   croppedImageView.frame = CGRectMake(0, 380, imageWidth, imageHeight);
+//   croppedImageView.center = CGPointMake([self view].center.x, croppedImageView.center.y);
+//   [[self view] addSubview:croppedImageView];
+// }
 
 %new
 - (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker {
@@ -231,6 +268,7 @@ static KSKImageCropper *imageCropper;
 - (void)photoPickerButtonPressed:(UIButton *)sender {
   ipc = [[[UIImagePickerController alloc] init] autorelease];
   ipc.delegate = self;
+  ipc.allowsEditing = YES;
   ipc.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
   if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) {
     [self presentViewController:ipc animated:YES completion:nil];
@@ -318,6 +356,40 @@ static KSKImageCropper *imageCropper;
   }
 }
 %end
+%end
+
+%hook UIImagePickerController
+- (void)_layoutViewController:(UIViewController *)viewController {
+  %orig;
+  if ([viewController isKindOfClass:%c(PUUIImageViewController)]) {
+    PUUIImageViewController *imgViewController = (PUUIImageViewController *)viewController;
+    PLCropOverlay *cropOverlay = [imgViewController cropOverlay];
+    PLCropOverlayCropView *cropOverlayView = MSHookIvar<PLCropOverlayCropView *>(cropOverlay, "_cropView");
+
+    CGFloat keyboardRatio = 250.0/375.0;
+    CGRect newCropRect = MSHookIvar<CGRect>(cropOverlay, "_cropRect");
+    CGFloat newHeight = CGRectGetWidth(newCropRect) * keyboardRatio;
+    CGFloat heightDifference = newCropRect.size.height - newHeight;
+    newCropRect.size.height = newHeight;
+    newCropRect.origin.y += heightDifference/2.0;
+
+    // Change crop rect
+    MSHookIvar<CGRect>(cropOverlay, "_cropRect") = newCropRect;
+
+    // Change crop rect view
+    [cropOverlayView setCropRect:newCropRect];
+
+    // Adjust content inset of UIScrollView to enable more image scrolling
+    CGFloat topPadding = CGRectGetMinY(newCropRect);
+    CGFloat bottomPadding = CGRectGetHeight(imgViewController.view.frame) - CGRectGetMinY(newCropRect) - CGRectGetHeight(newCropRect);;
+    PLPhotoTileViewController *photoViewController = MSHookIvar<PLPhotoTileViewController *>(imgViewController, "_imageTile");
+    [photoViewController scrollView].contentInset = UIEdgeInsetsMake(topPadding, 0, bottomPadding, 0);
+
+    // Change OK and Cancel button titles
+    [cropOverlay setOKButtonTitle:@"រក្សាទុក"];
+    [cropOverlay setCancelButtonTitle:@"បោះបង់"];
+  }
+}
 %end
 
 %ctor {
