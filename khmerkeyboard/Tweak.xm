@@ -1,6 +1,10 @@
 #import <libcolorpicker.h>
 #import <KSKImageCropper.h>
 
+@interface UIViewController (KhmerSmarterKeyboard)
+- (NSUserDefaults *)mySharedDefaults;
+@end
+
 @interface KSKSettingsViewController : UIViewController //KhmerKeyboard.SettingViewController
 @property (retain,nonatomic) NSUserDefaults * mySharedDefaults;
 @property (assign,nonatomic) UISwitch * zeroSpaceSwitcha;
@@ -19,9 +23,13 @@
 - (void)setFrame:(CGRect)arg1 ;
 @end
 
+@interface PLCropOverlayBottomBar : UIView
+@end
+
 @interface PLCropOverlay : UIView {
   PLCropOverlayCropView* _cropView;
 }
+@property (nonatomic,readonly) PLCropOverlayBottomBar *_bottomBar;
 - (CGRect)cropRect;
 - (void)_updateCropRectInRect:(CGRect)arg1 ;
 - (void)setOKButtonTitle:(id)arg1 ;
@@ -51,6 +59,9 @@ static UIButton *charThemeButton;
 static UIImagePickerController *ipc;
 static UIPopoverController *popover;
 static UIButton *photoPickerButton;
+
+static UISlider *overlaySlider;
+static UIView *overlayView;
 
 // static KSKImageCropper *imageCropper;
 
@@ -388,6 +399,40 @@ static UIButton *photoPickerButton;
     // Change OK and Cancel button titles
     [cropOverlay setOKButtonTitle:@"រក្សាទុក"];
     [cropOverlay setCancelButtonTitle:@"បោះបង់"];
+
+    // Add image overlay (slider, label and overlay view)
+    overlaySlider = [[[UISlider alloc] init] autorelease];
+    overlaySlider.frame = CGRectMake(0, 0, CGRectGetWidth(imgViewController.view.frame)/1.5, 10);
+    CGFloat sliderY = CGRectGetMinY(cropOverlay._bottomBar.frame) - 30;
+    overlaySlider.center = CGPointMake(imgViewController.view.center.x, sliderY);
+    [overlaySlider addTarget:self
+                      action:@selector(overlaySliderValueChanged:)
+            forControlEvents:UIControlEventValueChanged];
+    overlaySlider.maximumValue = 0.9;
+    [imgViewController.view addSubview:overlaySlider];
+
+    UILabel *sliderLabel = [[[UILabel alloc] init] autorelease];
+    sliderLabel.text = @"ពន្លឺ";
+    sliderLabel.textColor = [UIColor whiteColor];
+    [sliderLabel sizeToFit];
+    sliderLabel.center = CGPointMake(overlaySlider.center.x, overlaySlider.center.y - 30);
+    [imgViewController.view addSubview:sliderLabel];
+
+    // Add overlay view for UIImageView
+    overlayView = [[[UIView alloc] initWithFrame:newCropRect] autorelease];
+    overlayView.backgroundColor = [UIColor blackColor];
+    overlayView.alpha = 0;
+    overlayView.userInteractionEnabled = NO;
+    [imgViewController.view addSubview:overlayView];
+  }
+}
+
+%new
+- (void)overlaySliderValueChanged:(UISlider *)slider {
+  overlayView.alpha = slider.value;
+  if ([[self presentingViewController] isKindOfClass:objc_getClass("KhmerKeyboard.SettingViewController")]) {
+    UIViewController *settingsViewController = [self presentingViewController];
+    [[settingsViewController mySharedDefaults] setFloat:overlaySlider.value forKey:@"KSKBackgroundAlpha"];
   }
 }
 %end
