@@ -31,7 +31,7 @@
   view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
   self.view = view;
 
-  [self addCropRectangle];
+  [self addCropRectView];
   [self addButtons];
   [self addScrollableImage];
 }
@@ -44,7 +44,7 @@
   self.scrollView.delegate = self;
 
   self.imageView = [[[UIImageView alloc] init] autorelease];
-  CGRect imageViewFrame = self.cropRectangle.frame;
+  CGRect imageViewFrame = self.cropRectView.frame;
   CGFloat imageViewHeight = self.originalImage.size.height / self.originalImage.size.width;
   imageViewHeight *= CGRectGetWidth(imageViewFrame);
   self.imageView.frame = CGRectMake(0, 0, CGRectGetWidth(self.view.bounds), imageViewHeight);
@@ -70,25 +70,25 @@
 }
 
 - (void)setContentInset {
-  CGRect cropRectangleFrame = self.cropRectangle.frame;
-  CGFloat topPadding = CGRectGetMinY(cropRectangleFrame);
-  CGFloat bottomPadding = CGRectGetHeight(self.view.bounds) - CGRectGetMinY(cropRectangleFrame);
-  bottomPadding -= CGRectGetHeight(cropRectangleFrame);
+  CGRect cropRectViewFrame = self.cropRectView.frame;
+  CGFloat topPadding = CGRectGetMinY(cropRectViewFrame);
+  CGFloat bottomPadding = CGRectGetHeight(self.view.bounds) - CGRectGetMinY(cropRectViewFrame);
+  bottomPadding -= CGRectGetHeight(cropRectViewFrame);
   self.scrollView.contentInset = UIEdgeInsetsMake(topPadding, 0, bottomPadding, 0);
 }
 
-- (void)addCropRectangle {
-  self.cropRectangle = [[[UIView alloc] init] autorelease];
+- (void)addCropRectView {
+  self.cropRectView = [[[UIView alloc] init] autorelease];
   CGFloat superviewHeight = CGRectGetHeight(self.view.frame);
   CGFloat rectWidth = CGRectGetWidth(self.view.frame);
   CGFloat keyboardRatio = 250.0/375.0;
   CGFloat rectHeight = rectWidth * keyboardRatio;
-  self.cropRectangle.frame = CGRectMake(0, superviewHeight/4.0, rectWidth, rectHeight);
-  self.cropRectangle.layer.borderColor = [UIColor whiteColor].CGColor;
-  self.cropRectangle.layer.borderWidth = 1.0f;
-  self.cropRectangle.backgroundColor = [UIColor clearColor];
-  self.cropRectangle.userInteractionEnabled = NO; // This allows interaction for subviews under it
-  [self.view addSubview:self.cropRectangle];
+  self.cropRectView.frame = CGRectMake(0, superviewHeight/4.0, rectWidth, rectHeight);
+  self.cropRectView.layer.borderColor = [UIColor whiteColor].CGColor;
+  self.cropRectView.layer.borderWidth = 1.0f;
+  self.cropRectView.backgroundColor = [UIColor clearColor];
+  self.cropRectView.userInteractionEnabled = NO; // This allows interaction for subviews under it
+  [self.view addSubview:self.cropRectView];
 }
 
 - (void)addButtons {
@@ -124,8 +124,24 @@
   [barView addSubview:_saveButton];
 }
 
+- (UIButton *)saveButton {
+  return _saveButton;
+}
+
+- (UIButton *)cancelButton {
+  return _cancelButton;
+}
+
 - (void)cancelButtonPressed:(UIButton *)sender {
   [[self presentingViewController] dismissViewControllerAnimated:YES completion:nil];
+}
+
+- (UIImage *)imageWithImage:(UIImage *)image scaledToSize:(CGSize)newSize {
+  UIGraphicsBeginImageContext(newSize);
+  [image drawInRect:CGRectMake(0, 0, newSize.width, newSize.height)];
+  UIImage *newImage = UIGraphicsGetImageFromCurrentImageContext();
+  UIGraphicsEndImageContext();
+  return newImage;
 }
 
 - (void)saveButtonPressed:(UIButton *)sender {
