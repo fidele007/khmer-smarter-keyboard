@@ -4,11 +4,11 @@
   UIImage *_originalImage;
   UIButton *_cancelButton;
   UIButton *_saveButton;
-  UIView *_cropRectangle;
+  UIView *_cropRectView;
   UIScrollView *_scrollView;
   UIImageView *_imageView;
 }
-@property (nonatomic, strong) UIView *cropRectangle;
+@property (nonatomic, strong) UIView *cropRectView;
 @property (nonatomic, strong) UIScrollView *scrollView;
 @property (nonatomic, strong) UIImageView *imageView;
 @property (nonatomic, strong) UIImage *croppedImage;
@@ -16,8 +16,10 @@
 - (instancetype)initWithImage:(UIImage *)image;
 - (void)setOriginalImage:(UIImage *)image;
 - (UIImage *)originalImage;
-- (void)addCropRectangle;
+- (void)addCropRectView;
 - (void)addButtons;
+- (UIButton *)saveButton;
+- (UIButton *)cancelButton;
 - (void)cancelButtonPressed:(UIButton *)sender;
 - (void)saveButtonPressed:(UIButton *)sender;
 @end
