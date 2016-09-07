@@ -1,5 +1,7 @@
+#import "KSKImageCropperDelegate.h"
+
 @interface KSKImageCropper : UIViewController <UIScrollViewDelegate> {
-  UIImage *_importedImage;
+  UIImage *_originalImage;
   UIButton *_cancelButton;
   UIButton *_saveButton;
   UIView *_cropRectangle;
@@ -9,9 +11,11 @@
 @property (nonatomic, strong) UIView *cropRectangle;
 @property (nonatomic, strong) UIScrollView *scrollView;
 @property (nonatomic, strong) UIImageView *imageView;
-- (id)initWithImage:(UIImage *)image;
-- (void)setImportedImage:(UIImage *)image;
-- (UIImage *)importedImage;
+@property (nonatomic, strong) UIImage *croppedImage;
+@property (nonatomic, assign) id<KSKImageCropperDelegate> delegate;
+- (instancetype)initWithImage:(UIImage *)image;
+- (void)setOriginalImage:(UIImage *)image;
+- (UIImage *)originalImage;
 - (void)addCropRectangle;
 - (void)addButtons;
 - (void)cancelButtonPressed:(UIButton *)sender;

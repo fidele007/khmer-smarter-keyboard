@@ -1,17 +1,20 @@
 #import "KSKImageCropper.h"
 
 @implementation KSKImageCropper : UIViewController
-- (id)initWithImage:(UIImage *)image {
-  _importedImage = image;
-  return [self init];
+- (instancetype)initWithImage:(UIImage *)image {
+  self = [super init];
+  if (self) {
+    _originalImage = [image copy];
+  }
+  return self;
 }
 
-- (void)setImportedImage:(UIImage *)image {
-  _importedImage = image;
+- (void)setOriginalImage:(UIImage *)image {
+  _originalImage = [image copy];
 }
 
-- (UIImage *)importedImage {
-  return _importedImage;
+- (UIImage *)originalImage {
+  return _originalImage;
 }
 
 - (BOOL)shouldAutorotate {
@@ -42,9 +45,10 @@
 
   self.imageView = [[[UIImageView alloc] init] autorelease];
   CGRect imageViewFrame = self.cropRectangle.frame;
-  CGFloat imageViewHeight = _importedImage.size.height * CGRectGetWidth(imageViewFrame)/_importedImage.size.width;
+  CGFloat imageViewHeight = self.originalImage.size.height / self.originalImage.size.width;
+  imageViewHeight *= CGRectGetWidth(imageViewFrame);
   self.imageView.frame = CGRectMake(0, 0, CGRectGetWidth(self.view.bounds), imageViewHeight);
-  self.imageView.image = [self importedImage];
+  self.imageView.image = [self originalImage];
 
   self.scrollView.contentSize = self.imageView.bounds.size;
   self.scrollView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
@@ -68,7 +72,8 @@
 - (void)setContentInset {
   CGRect cropRectangleFrame = self.cropRectangle.frame;
   CGFloat topPadding = CGRectGetMinY(cropRectangleFrame);
-  CGFloat bottomPadding = CGRectGetHeight(self.view.bounds) - CGRectGetMinY(cropRectangleFrame) - CGRectGetHeight(cropRectangleFrame);
+  CGFloat bottomPadding = CGRectGetHeight(self.view.bounds) - CGRectGetMinY(cropRectangleFrame);
+  bottomPadding -= CGRectGetHeight(cropRectangleFrame);
   self.scrollView.contentInset = UIEdgeInsetsMake(topPadding, 0, bottomPadding, 0);
 }
 

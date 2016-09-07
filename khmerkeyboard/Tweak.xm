@@ -1,4 +1,5 @@
-#include <libcolorpicker.h>
+#import <libcolorpicker.h>
+#import <KSKImageCropper.h>
 
 @interface KSKSettingsViewController : UIViewController //KhmerKeyboard.SettingViewController
 @property (retain,nonatomic) NSUserDefaults * mySharedDefaults;
@@ -19,6 +20,8 @@ static UIButton *charThemeButton;
 static UIImagePickerController *ipc;
 static UIPopoverController *popover;
 static UIButton *photoPickerButton;
+
+static KSKImageCropper *imageCropper;
 
 %hook KSKSettingsViewController //KhmerKeyboard.SettingViewController
 - (void)viewDidLayoutSubviews {
@@ -88,7 +91,6 @@ static UIButton *photoPickerButton;
 
   // Set initial state of ZWSP switch according to its preferences
   BOOL isZWSPEnabled = [[self mySharedDefaults] boolForKey:@"isZWSPEnabled"];
-  HBLogDebug(@"isZWSPEnabled: %d", isZWSPEnabled);
   [[self zeroSpaceSwitcha] setOn:isZWSPEnabled];
 
   // Create |spaceCursorLabel|
@@ -187,19 +189,37 @@ static UIButton *photoPickerButton;
 %new
 - (void)imagePickerController:(UIImagePickerController *)picker
       didFinishPickingMediaWithInfo:(NSDictionary *)info {
-  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) {
-    [picker dismissViewControllerAnimated:YES completion:nil];
-  } else {
-    [popover dismissPopoverAnimated:YES];
-  }
+
   UIImage *pickedImage = [info objectForKey:UIImagePickerControllerOriginalImage];
-  NSData *imageData = UIImageJPEGRepresentation(pickedImage, 0.9f);
-  NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-  NSString *documentsDirectory = [paths firstObject];
-  NSString *fileName = [NSString stringWithFormat:@"%@/keyboardBackgroundImage.jpg", documentsDirectory];
-  [imageData writeToFile:fileName atomically:YES];
-  [[self mySharedDefaults] setObject:fileName forKey:@"KSKBackgroundImage"];
-  [[self mySharedDefaults] synchronize];
+  imageCropper = [[[KSKImageCropper alloc] initWithImage:pickedImage] autorelease];
+  imageCropper.delegate = self;
+  [picker presentViewController:imageCropper animated:YES completion:nil];
+
+  // NSData *imageData = UIImageJPEGRepresentation(pickedImage, 0.9f);
+  // NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+  // NSString *documentsDirectory = [paths firstObject];
+  // NSString *fileName = [NSString stringWithFormat:@"%@/keyboardBackgroundImage.jpg", documentsDirectory];
+  // [imageData writeToFile:fileName atomically:YES];
+  // [[self mySharedDefaults] setObject:fileName forKey:@"KSKBackgroundImage"];
+  // [[self mySharedDefaults] synchronize];
+}
+
+%new
+- (void)imageCropper:(KSKImageCropper *)cropper didFinishCroppingImageWithResult:(UIImage *)image {
+  [cropper dismissViewControllerAnimated:YES completion:nil];
+  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) {
+    [ipc dismissViewControllerAnimated:NO completion:nil];
+  } else {
+    [popover dismissPopoverAnimated:NO];
+  }
+
+  // Show cropped image result
+  UIImageView *croppedImageView = [[[UIImageView alloc] initWithImage:image] autorelease];
+  CGFloat imageWidth = 300;
+  CGFloat imageHeight = image.size.height * imageWidth/image.size.width;
+  croppedImageView.frame = CGRectMake(0, 380, imageWidth, imageHeight);
+  croppedImageView.center = CGPointMake([self view].center.x, croppedImageView.center.y);
+  [[self view] addSubview:croppedImageView];
 }
 
 %new
@@ -211,7 +231,6 @@ static UIButton *photoPickerButton;
 - (void)photoPickerButtonPressed:(UIButton *)sender {
   ipc = [[[UIImagePickerController alloc] init] autorelease];
   ipc.delegate = self;
-  // ipc.sourceType = UIImagePickerControllerSourceTypeSavedPhotosAlbum;
   ipc.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
   if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) {
     [self presentViewController:ipc animated:YES completion:nil];
@@ -256,7 +275,6 @@ static UIButton *photoPickerButton;
 
 %new
 - (void)zeroSpaceStateChanged:(UISwitch *)zeroSpaceSwitch {
-  HBLogDebug(@"Setting ZWSP to %d", zeroSpaceSwitch.on);
   [[self mySharedDefaults] setObject:[NSNumber numberWithBool:zeroSpaceSwitch.on]
                               forKey:@"isZWSPEnabled"];
   [[self mySharedDefaults] synchronize];
@@ -264,7 +282,6 @@ static UIButton *photoPickerButton;
 
 %new
 - (void)spaceCursorStateChanged:(UISwitch *)spaceCursorSwitch {
-  HBLogDebug(@"Setting SpaceCursor to %d", spaceCursorSwitch.on);
   [[self mySharedDefaults] setObject:[NSNumber numberWithBool:spaceCursorSwitch.on]
                               forKey:@"isSpaceCursorEnabled"];
   [[self mySharedDefaults] synchronize];
