@@ -101,13 +101,13 @@ static CGPoint lastTranslatedPoint;
     return;
   }
 
-  NSInteger themeOption = [[kbController sharedDefaults] integerForKey:@"KSKSelectedThemeOption"];
+  NSInteger themeOption = [kbController integerForKey:@"KSKSelectedThemeOption"];
   if (themeOption != 2) {
     return;
   }
 
-  NSString *backgroundImagePath = [[kbController sharedDefaults] objectForKey:@"KSKBackgroundImage"];
-  CGFloat overlayAlpha = [[kbController sharedDefaults] floatForKey:@"KSKBackgroundAlpha"] ?: 0;
+  NSString *backgroundImagePath = [kbController objectForKey:@"KSKBackgroundImage"];
+  CGFloat overlayAlpha = [kbController floatForKey:@"KSKBackgroundAlpha"] ?: 0;
   if (backgroundImagePath && ![backgroundImagePath isEqualToString:@""]) {
     NSData *imageData = [NSData dataWithContentsOfFile:backgroundImagePath];
     UIImage *backgroundImage = [UIImage imageWithData:imageData];
@@ -146,14 +146,14 @@ static CGPoint lastTranslatedPoint;
   kbController = self;
 
   // Apply ZWSP Settings
-  BOOL isZWSPEnabled = [[self sharedDefaults] boolForKey:@"isZWSPEnabled"];
+  BOOL isZWSPEnabled = [self boolForKey:@"isZWSPEnabled"];
   if ([self respondsToSelector:@selector(setUseZeroSpace:)]) { // v2.1.1 and down
     [self setUseZeroSpace:isZWSPEnabled];
   } else if ([self respondsToSelector:@selector(setIsZeroSpace:)]) { // v2.1.2 and up
     [self setIsZeroSpace:isZWSPEnabled];
   }
 
-  isSpaceCursorEnabled = [[self sharedDefaults] boolForKey:@"isSpaceCursorEnabled"];
+  isSpaceCursorEnabled = [self boolForKey:@"isSpaceCursorEnabled"];
 }
 
 - (void)viewDidLayoutSubviews {  
@@ -183,13 +183,13 @@ static CGPoint lastTranslatedPoint;
   }
 
   // Color Keyboard Theme
-  NSInteger themeOption = [[self sharedDefaults] integerForKey:@"KSKSelectedThemeOption"];
+  NSInteger themeOption = [self integerForKey:@"KSKSelectedThemeOption"];
   if (themeOption == 0) {
     return;
   }
 
-  NSString *kbBackgroundColorHex = [[self sharedDefaults] objectForKey:@"keyboardBackgroundColor"];
-  NSString *kbForegroundColorHex = [[self sharedDefaults] objectForKey:@"keyboardForegroundColor"];
+  NSString *kbBackgroundColorHex = [self objectForKey:@"keyboardBackgroundColor"];
+  NSString *kbForegroundColorHex = [self objectForKey:@"keyboardForegroundColor"];
   UIColor *kbBackgroundColor = LCPParseColorString(kbBackgroundColorHex, @"#1E4679");
   UIColor *kbForegroundColor = LCPParseColorString(kbForegroundColorHex, @"#FFFFFF");
   if (themeOption == 2) {
@@ -343,11 +343,10 @@ static CGPoint lastTranslatedPoint;
     return;
   }
 
-  NSUserDefaults *settings = [kbController sharedDefaults];
-  BOOL isThemeEnabled = [settings boolForKey:@"isThemeEnabled"];
+  BOOL isThemeEnabled = [kbController boolForKey:@"isThemeEnabled"];
   if (isThemeEnabled) {
-    NSString *kbBackgroundColorHex = [settings objectForKey:@"keyboardBackgroundColor"];
-    NSString *kbForegroundColorHex = [settings objectForKey:@"keyboardForegroundColor"];
+    NSString *kbBackgroundColorHex = [kbController objectForKey:@"keyboardBackgroundColor"];
+    NSString *kbForegroundColorHex = [kbController objectForKey:@"keyboardForegroundColor"];
     UIColor *kbBackgroundColor = LCPParseColorString(kbBackgroundColorHex, @"#1E4679");
     UIColor *kbForegroundColor = LCPParseColorString(kbForegroundColorHex, @"#FFFFFF");
     [self applyThemeColor:kbBackgroundColor foregroundColor:kbForegroundColor];
