@@ -55,6 +55,10 @@
 - (void)changeToNextLanguage;
 // New method
 - (void)applyThemeColor:(UIColor *)backgroundColor foregroundColor:(UIColor *)foregroundColor;
+- (id)objectForKey:(NSString *)key;
+- (BOOL)boolForKey:(NSString *)key;
+- (NSInteger)integerForKey:(NSString *)key;
+- (CGFloat)floatForKey:(NSString *)key;
 @end
 
 @interface KSKEmojiKeyboardViewController : UIViewController // com_vanna_KhmerKeyboard_Keyboard.EmojiKeyboardViewController
@@ -209,6 +213,46 @@ static CGPoint lastTranslatedPoint;
     }
   }
   */
+}
+
+%new
+- (id)objectForKey:(NSString *)key {
+  if ([[self sharedDefaults] objectForKey:key]) {
+    return [[self sharedDefaults] objectForKey:key];
+  } else {
+    NSUserDefaults *newDefaults = [[[NSUserDefaults alloc] initWithSuiteName:@"group.alien-dev.keyboard"] autorelease];
+    return [newDefaults objectForKey:key];
+  }
+}
+
+%new
+- (NSInteger)integerForKey:(NSString *)key {
+  if ([[self sharedDefaults] objectForKey:key]) {
+    return [[self sharedDefaults] integerForKey:key];
+  } else {
+    NSUserDefaults *newDefaults = [[[NSUserDefaults alloc] initWithSuiteName:@"group.alien-dev.keyboard"] autorelease];
+    return [newDefaults integerForKey:key];
+  }
+}
+
+%new
+- (BOOL)boolForKey:(NSString *)key {
+  if ([[self sharedDefaults] objectForKey:key]) {
+    return [[self sharedDefaults] boolForKey:key];
+  } else {
+    NSUserDefaults *newDefaults = [[[NSUserDefaults alloc] initWithSuiteName:@"group.alien-dev.keyboard"] autorelease];
+    return [newDefaults boolForKey:key];
+  }
+}
+
+%new
+- (CGFloat)floatForKey:(NSString *)key {
+  if ([[self sharedDefaults] objectForKey:key]) {
+    return [[self sharedDefaults] floatForKey:key];
+  } else {
+    NSUserDefaults *newDefaults = [[[NSUserDefaults alloc] initWithSuiteName:@"group.alien-dev.keyboard"] autorelease];
+    return [newDefaults floatForKey:key];
+  }
 }
 
 %new
