@@ -51,6 +51,8 @@
 
 static UILabel *spaceCursorLabel;
 static UISwitch *spaceCursorSwitch;
+static UILabel *clickSoundLabel;
+static UISwitch *clickSoundSwitch;
 static UILabel *themeLabel;
 static UISegmentedControl *themeOption;
 static UIButton *themeButton;
@@ -93,16 +95,27 @@ static UIView *overlayView;
     spaceCursorLabel.center = CGPointMake(spaceCursorLabel.center.x, spaceCursorSwitch.center.y);
   }
 
+  // Update |clickSoundLabel| frame with orientation
+  CGRect clickSoundLabelFrame = spaceCursorLabel.frame;
+  clickSoundLabelFrame.origin.y += CGRectGetHeight(clickSoundLabelFrame) + 20;
+  clickSoundLabel.frame = clickSoundLabelFrame;
+  [clickSoundLabel sizeToFit];
+
+  // Update |clickSoundSwitch| frame with orientation
+  CGRect clickSoundSwitchFrame = spaceCursorSwitchFrame;
+  clickSoundSwitchFrame.origin.y += CGRectGetHeight(clickSoundSwitchFrame) + 10;
+  clickSoundSwitch.frame = clickSoundSwitchFrame;
+
   // Update |themeLabel| frame with orientation
-  CGRect themeLabelFrame = spaceCursorLabel.frame;
+  CGRect themeLabelFrame = clickSoundLabelFrame;
   themeLabelFrame.origin.y += CGRectGetHeight(themeLabelFrame) + 20;
   themeLabel.frame = themeLabelFrame;
   [themeLabel sizeToFit];
   themeLabel.center = CGPointMake(superviewWidth/2.0, themeLabel.center.y);
 
   // Update |themeOption| frame with orientation
-  CGRect themeOptionFrame = spaceCursorLabel.frame;
-  themeOptionFrame.origin.y += CGRectGetHeight(themeOptionFrame) + 50;
+  CGRect themeOptionFrame = themeLabelFrame;
+  themeOptionFrame.origin.y += CGRectGetHeight(themeOptionFrame) + 10;
   themeOptionFrame.size.width = superviewWidth/1.2;
   themeOptionFrame.size.height *= 1.7;
   themeOption.frame = themeOptionFrame;
@@ -148,6 +161,20 @@ static UIView *overlayView;
                         action:@selector(spaceCursorStateChanged:)
               forControlEvents:UIControlEventValueChanged];
   [[self view] addSubview:spaceCursorSwitch];
+
+  // Create |clickSoundLabel|
+  clickSoundLabel = [[[UILabel alloc] init] autorelease];
+  clickSoundLabel.text = @"សំឡេងក្ដារចុច";
+  [[self view] addSubview:clickSoundLabel];
+
+  // Create |clickSoundSwitch|
+  clickSoundSwitch = [[[UISwitch alloc] init] autorelease];
+  BOOL KSKClickSoundEnabled = [[self mySharedDefaults] boolForKey:@"KSKClickSoundEnabled"];
+  [clickSoundSwitch setOn:KSKClickSoundEnabled];
+  [clickSoundSwitch addTarget:self
+                       action:@selector(clickSoundStateChanged:)
+             forControlEvents:UIControlEventValueChanged];
+  [[self view] addSubview:clickSoundSwitch];
 
   themeLabel = [[[UILabel alloc] init] autorelease];
   themeLabel.text = @"--Theme--";
@@ -337,6 +364,13 @@ static UIView *overlayView;
 }
 
 %new
+- (void)clickSoundStateChanged:(UISwitch *)clickSoundSwitch {
+  [[self mySharedDefaults] setObject:[NSNumber numberWithBool:clickSoundSwitch.on]
+                              forKey:@"KSKClickSoundEnabled"];
+  [[self mySharedDefaults] synchronize];
+}
+
+%new
 - (void)animateView:(UIView *)view withAlpha:(CGFloat)alpha duration:(CGFloat)duration {
   [UIView animateWithDuration:duration delay:0.0 options:UIViewAnimationCurveEaseOut
         animations:^{
@@ -360,7 +394,7 @@ static UIView *overlayView;
   if ([self respondsToSelector:@selector(settinglabel)]) {
     [self settinglabel].hidden = NO;
   }
-  
+
   if ([self respondsToSelector:@selector(settingbutton)]) {
     [self settingbutton].hidden = NO;
     [self settingbutton].userInteractionEnabled = YES;
