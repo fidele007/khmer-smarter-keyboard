@@ -1,4 +1,5 @@
-#include <libcolorpicker.h>
+#import <libcolorpicker.h>
+#import <AudioToolbox/AudioToolbox.h>
 
 @interface UIView (KhmerSmarterKeyboard)
 // com_vanna_KhmerKeyboard_Keyboard.LightBox
@@ -74,6 +75,7 @@
 
 static KSKKeyboardViewController *kbController;
 static BOOL isSpaceCursorEnabled;
+static BOOL KSKClickSoundEnabled;
 static CGPoint iniTouchedPoint;
 static CGPoint lastTranslatedPoint;
 
@@ -128,6 +130,41 @@ static CGPoint lastTranslatedPoint;
   }
 }
 
+- (void)altButtonPressed:(id)arg1 {
+  %orig;
+  if (KSKClickSoundEnabled) {
+    AudioServicesPlaySystemSound(1104);
+  }
+}
+
+- (void)emojiButtonPressed:(id)arg1 {
+  %orig;
+  if (KSKClickSoundEnabled) {
+    AudioServicesPlaySystemSound(1104);
+  }
+}
+
+- (void)deleteButtonPressed:(id)arg1 {
+  %orig;
+  if (KSKClickSoundEnabled) {
+    AudioServicesPlaySystemSound(1104);
+  }
+}
+
+- (void)returnButtonPressed:(id)arg1 {
+  %orig;
+  if (KSKClickSoundEnabled) {
+    AudioServicesPlaySystemSound(1104);
+  }
+}
+
+- (void)advanceToNextInputMode {
+  %orig;
+  if (KSKClickSoundEnabled) {
+    AudioServicesPlaySystemSound(1104);
+  }
+}
+
 %new
 - (UIImage *)imageWithImage:(UIImage *)image scaledToSize:(CGSize)newSize {
   UIGraphicsBeginImageContext(newSize);
@@ -154,6 +191,7 @@ static CGPoint lastTranslatedPoint;
   }
 
   isSpaceCursorEnabled = [self boolForKey:@"isSpaceCursorEnabled"];
+  KSKClickSoundEnabled = [self boolForKey:@"KSKClickSoundEnabled"];
 }
 
 - (void)viewDidLayoutSubviews {  
@@ -291,6 +329,10 @@ static CGPoint lastTranslatedPoint;
 
 %hook KSKSpaceButton // com_vanna_KhmerKeyboard_Keyboard.SpaceButton
 - (void)buttonPanned:(UIPanGestureRecognizer *)panGesture {
+  if (KSKClickSoundEnabled && panGesture.state == UIGestureRecognizerStateEnded) {
+    AudioServicesPlaySystemSound(1104);
+  }
+
   // Implement cursor moving using the space bar
   if (!isSpaceCursorEnabled) {
     return %orig;
@@ -314,7 +356,13 @@ static CGPoint lastTranslatedPoint;
   } else {
     %orig;
   }
+}
 
+- (void)handleTap:(id)arg1 {
+  %orig;
+  if (KSKClickSoundEnabled) {
+    AudioServicesPlaySystemSound(1104);
+  }
 }
 
 %new
@@ -326,6 +374,10 @@ static CGPoint lastTranslatedPoint;
   } else if (touchedPoint.x > [self frame].size.width - 30) {
     [self animateWayUp:[self rightLabel]];
     [kbController insertText:[self rightCharacter]];
+  }
+
+  if (KSKClickSoundEnabled && swipeGesture.state == UIGestureRecognizerStateEnded) {
+    AudioServicesPlaySystemSound(1104);
   }
 }
 %end
@@ -375,10 +427,37 @@ static CGPoint lastTranslatedPoint;
 }
 %end
 
+%hook KSKCharacterButton
+- (void)buttonPressed {
+  %orig;
+  if (KSKClickSoundEnabled) {
+    AudioServicesPlaySystemSound(1104);
+  }
+}
+
+- (void)buttonPanned:(UIPanGestureRecognizer *)gesture {
+  %orig;
+  if (KSKClickSoundEnabled && gesture.state == UIGestureRecognizerStateEnded) {
+    AudioServicesPlaySystemSound(1104);
+  }
+}
+%end
+
+%hook KSKSuggestionButton
+- (void)buttonPressed {
+  %orig;
+  if (KSKClickSoundEnabled) {
+    AudioServicesPlaySystemSound(1104);
+  }
+}
+%end
+
 %ctor {
   %init(KSKKeyboardViewController = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController"),
+        KSKEmojiKeyboardViewController = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.EmojiKeyboardViewController"),
         KSKKeyboardView = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.KeyboardView"),
+        KSKCharacterButton = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.CharacterButton"),
         KSKSpaceButton = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.SpaceButton"),
-        KSKEmojiKeyboardViewController = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.EmojiKeyboardViewController")
+        KSKSuggestionButton = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.SuggestionButton")
        );
 }
