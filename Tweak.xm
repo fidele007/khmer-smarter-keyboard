@@ -417,6 +417,27 @@ static CGPoint lastTranslatedPoint;
   }
 }
 
+- (void)abcButtonClicked {
+  %orig;
+  if (KSKClickSoundEnabled) {
+    AudioServicesPlaySystemSound(1104);
+  }
+}
+
+- (void)emojiButtonClicked:(id)arg1 {
+  %orig;
+  if (KSKClickSoundEnabled) {
+    AudioServicesPlaySystemSound(1104);
+  }
+}
+
+- (void)deleteButtonPressed:(id)arg1 {
+  %orig;
+  if (KSKClickSoundEnabled) {
+    AudioServicesPlaySystemSound(1104);
+  }
+}
+
 %new
 - (void)applyThemeColor:(UIColor *)backgroundColor foregroundColor:(UIColor *)foregroundColor {
   // Background color
@@ -439,7 +460,16 @@ static CGPoint lastTranslatedPoint;
 }
 %end
 
-%hook KSKCharacterButton
+%hook KSKEmojiCollectionViewController // com_vanna_KhmerKeyboard_Keyboard.EmojiKeyboardViewController
+- (void)collectionView:(id)arg1 didSelectItemAtIndexPath:(id)arg2 {
+  %orig;
+  if (KSKClickSoundEnabled) {
+    AudioServicesPlaySystemSound(1104);
+  }
+}
+%end
+
+%hook KSKCharacterButton // com_vanna_KhmerKeyboard_Keyboard.CharacterButton
 - (void)buttonPressed {
   %orig;
   if (KSKClickSoundEnabled) {
@@ -455,7 +485,7 @@ static CGPoint lastTranslatedPoint;
 }
 %end
 
-%hook KSKSuggestionButton
+%hook KSKSuggestionButton // com_vanna_KhmerKeyboard_Keyboard.SuggestionButton
 - (void)buttonPressed {
   %orig;
   if (KSKClickSoundEnabled) {
@@ -466,10 +496,11 @@ static CGPoint lastTranslatedPoint;
 
 %ctor {
   %init(KSKKeyboardViewController = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController"),
-        KSKEmojiKeyboardViewController = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.EmojiKeyboardViewController"),
         KSKKeyboardView = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.KeyboardView"),
+        KSKSuggestionButton = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.SuggestionButton"),
         KSKCharacterButton = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.CharacterButton"),
         KSKSpaceButton = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.SpaceButton"),
-        KSKSuggestionButton = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.SuggestionButton")
+        KSKEmojiKeyboardViewController = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.EmojiKeyboardViewController"),
+        KSKEmojiCollectionViewController = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.EmojiCollectionViewController")
        );
 }
