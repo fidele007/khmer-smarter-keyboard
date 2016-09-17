@@ -415,6 +415,32 @@ static CGPoint lastTranslatedPoint;
     UIColor *kbForegroundColor = LCPParseColorString(kbForegroundColorHex, @"#FFFFFF");
     [self applyThemeColor:kbBackgroundColor foregroundColor:kbForegroundColor];
   }
+
+  // Emoji keyboard's image background
+  NSInteger themeOption = [kbController integerForKey:@"KSKSelectedThemeOption"];
+  if (themeOption != 2) {
+    return;
+  }
+
+  NSString *backgroundImagePath = [kbController objectForKey:@"KSKBackgroundImage"];
+  CGFloat overlayAlpha = [kbController floatForKey:@"KSKBackgroundAlpha"] ?: 0;
+  if (backgroundImagePath && ![backgroundImagePath isEqualToString:@""]) {
+    NSData *imageData = [NSData dataWithContentsOfFile:backgroundImagePath];
+    UIImage *backgroundImage = [UIImage imageWithData:imageData];
+    if (backgroundImage) {
+      UIImageView *backgroundImageView = [[[UIImageView alloc] initWithFrame:[[self view] frame]] autorelease];
+      backgroundImageView.contentMode = UIViewContentModeScaleAspectFill;
+      backgroundImageView.image = backgroundImage;
+      [[self view] addSubview:backgroundImageView];
+      [[self view] sendSubviewToBack:backgroundImageView];
+
+      // Adding overlay view over image view to darken the image
+      UIView *overlayView = [[[UIView alloc] initWithFrame:[[self view] frame]] autorelease];
+      overlayView.backgroundColor = [UIColor blackColor];
+      overlayView.alpha = overlayAlpha;
+      [backgroundImageView addSubview:overlayView];
+    }
+  }
 }
 
 - (void)abcButtonClicked {
