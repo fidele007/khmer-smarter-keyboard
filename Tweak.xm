@@ -85,6 +85,13 @@ static CGPoint lastTranslatedPoint;
 - (void)handleLongPressForDeleteButtonWithGestureRecognizer:(UILongPressGestureRecognizer *)longPressGesture {
   if (longPressGesture.state == UIGestureRecognizerStateChanged && kbController) {
     [kbController.textDocumentProxy deleteBackward];
+    if (KSKClickSoundEnabled) {
+      NSString *textBefore = [kbController.textDocumentProxy documentContextBeforeInput];
+      if (!textBefore || [textBefore isEqualToString:@""]) {
+        return;
+      }
+      AudioServicesPlaySystemSound(1104);
+    }
   }
 }
 
