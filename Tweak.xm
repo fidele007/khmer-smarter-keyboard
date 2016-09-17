@@ -90,8 +90,13 @@ static CGPoint lastTranslatedPoint;
 
 // Long press on space bar to switch between internal keyboards
 - (void)handleLongPressForSpaceButtonWithGestureRecognizer:(UILongPressGestureRecognizer *)longPressGesture {
-  if (longPressGesture.state == UIGestureRecognizerStateBegan) {
+  if (!isSpaceCursorEnabled) {
+    return %orig;
+  } else if (longPressGesture.state == UIGestureRecognizerStateBegan) {
     [self changeToNextLanguage];
+    if (KSKClickSoundEnabled) {
+      AudioServicesPlaySystemSound(1104);
+    }
   }
 }
 
