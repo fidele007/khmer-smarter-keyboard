@@ -231,7 +231,6 @@ static CGPoint lastTranslatedPoint;
     [spaceButton addGestureRecognizer:spaceBarSwipeGesture];
     [spaceBarSwipeGesture release];
   }
-
   // Color Keyboard Theme
   NSInteger themeOption = [self integerForKey:@"KSKSelectedThemeOption"];
   if (themeOption == 0) {
@@ -245,6 +244,7 @@ static CGPoint lastTranslatedPoint;
   if (themeOption == 2) {
     kbBackgroundColor = [UIColor clearColor];
   }
+
   [self applyThemeColor:kbBackgroundColor foregroundColor:kbForegroundColor];
 
   /*
@@ -316,6 +316,11 @@ static CGPoint lastTranslatedPoint;
       subview.currentView.backgroundColor = backgroundColor;
 
       // Foreground color
+      if (![[subview currentView] respondsToSelector:@selector(predictionView)]) {
+        // if |subview| is SimpleInfoView (no dictionary database downloaded)
+        continue;
+      }
+      // if |subview| is AdsAndPredictionView (with dictionary database)
       UIScrollView *scrollView = [[subview currentView] predictionView];
       for (UIButton *suggestionBox in [scrollView subviews]) {
         if ([suggestionBox respondsToSelector:@selector(setTitleColor:forState:)]) {
