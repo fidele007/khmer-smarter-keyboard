@@ -37,15 +37,17 @@
 @end
 
 @interface KSKKeyboardView : UIView // com_vanna_KhmerKeyboard_Keyboard.KeyboardView
-@property (retain,nonatomic) KSKSpaceButton *spaceButton; 
+@property (retain,nonatomic) KSKSpaceButton *spaceButton;
 - (void)setSpaceButton:(KSKSpaceButton *)spaceButton;
 - (UIImage *)imageWithImage:(UIImage *)image scaledToSize:(CGSize)newSize;
+- (UIButton *)clickToDownloadView;
+- (UIViewController *)keyboardViewcontroller;
 @end
 
-@interface KSKKeyboardViewController : UIInputViewController // com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController
+@interface KSKKeyboardViewController : UIInputViewController <NSURLConnectionDelegate> // com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController
 @property (assign,nonatomic) BOOL useZeroSpace;
 @property (retain,nonatomic) KSKKeyboardView *keyboardView;
-@property (retain,nonatomic) NSUserDefaults *sharedDefaults; 
+@property (retain,nonatomic) NSUserDefaults *sharedDefaults;
 - (NSUserDefaults *)sharedDefaults;
 - (void)setUseZeroSpace:(BOOL)arg1; // v2.1.1 and down
 - (void)setIsZeroSpace:(BOOL)arg1 ; // v2.1.2 and up
@@ -73,13 +75,103 @@
 - (void)applyThemeColor:(UIColor *)backgroundColor foregroundColor:(UIColor *)foregroundColor;
 @end
 
+@interface SSZipArchive : NSObject
++ (BOOL)unzipFileAtPath:(id)arg1 toDestination:(id)arg2 ;
+@end
+
 static KSKKeyboardViewController *kbController;
 static BOOL isSpaceCursorEnabled;
 static BOOL KSKClickSoundEnabled;
 static CGPoint iniTouchedPoint;
 static CGPoint lastTranslatedPoint;
 
+// static NSMutableData *downloadedData;
+// static NSURLResponse *urlResponse;
+static NSTimer *downloadTimer;
+
 %hook KSKKeyboardView // com_vanna_KhmerKeyboard_Keyboard.KeyboardView
+- (void)downloadPredictionDataRequested {
+  // %orig;
+
+  [[self clickToDownloadView] setTitle:@"កំពុងទាញយក" forState:UIControlStateNormal];
+  downloadTimer = [NSTimer scheduledTimerWithTimeInterval:0.5
+                                                   target:self
+                                                 selector:@selector(updateDownloadLabel)
+                                                 userInfo:nil
+                                                  repeats:YES];
+
+  NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+  NSString *documentsDir = [paths firstObject];
+
+  KSKSpaceButton *spaceButton = [self spaceButton];
+  NSString *spaceText = spaceButton.centerLabel.text;
+
+  if (![spaceText canBeConvertedToEncoding:NSASCIIStringEncoding]) {
+    NSString *kmPath = [documentsDir stringByAppendingPathComponent:@"khmer.sqlite3_v1.zip"];
+    NSURL *kmURL = [NSURL URLWithString:@"https://archive.org/download/khmer.sqlite3_v1/khmer.sqlite3_v1.zip"];
+    NSURLRequest *kmRequest = [NSURLRequest requestWithURL:kmURL];
+    [NSURLConnection sendAsynchronousRequest:kmRequest
+                                       queue:[NSOperationQueue currentQueue]
+                           completionHandler:^(NSURLResponse *response, NSData *data, NSError *error) {
+        if (error) {
+          HBLogError(@"Download Error: %@", error.description);
+        } else if (data && [data writeToFile:kmPath atomically:YES]) {
+          HBLogInfo(@"File is saved to %@", kmPath);
+          [SSZipArchive unzipFileAtPath:kmPath toDestination:documentsDir];
+
+          // Stop updating downloading label
+          [downloadTimer invalidate];
+          downloadTimer = nil;
+
+          [[self clickToDownloadView] setTitle:@"ទាញយករួចរាល់! (ﾉ´ヮ´)ﾉ*:･ﾟ✧" forState:UIControlStateNormal];
+          dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            %orig;
+            NSFileManager *fileManager = [NSFileManager defaultManager];
+            [fileManager removeItemAtPath:kmPath error:nil];
+          });
+        }
+    }];
+  } else {
+    NSString *enPath = [documentsDir stringByAppendingPathComponent:@"english.sqlite3_v1.zip"];
+    NSURL *engURL = [NSURL URLWithString:@"https://archive.org/download/english.sqlite3_v1/english.sqlite3_v1.zip"];
+    NSURLRequest *enRequest = [NSURLRequest requestWithURL:engURL];
+    [NSURLConnection sendAsynchronousRequest:enRequest
+                                       queue:[NSOperationQueue currentQueue]
+                           completionHandler:^(NSURLResponse *response, NSData *data, NSError *error) {
+        if (error) {
+          HBLogError(@"Download Error: %@", error.description);
+        } else if (data && [data writeToFile:enPath atomically:YES]) {
+          HBLogInfo(@"File is saved to %@", enPath);
+          [SSZipArchive unzipFileAtPath:enPath toDestination:documentsDir];
+
+          // Stop updating downloading label
+          [downloadTimer invalidate];
+          downloadTimer = nil;
+
+          [[self clickToDownloadView] setTitle:@"ទាញយករួចរាល់! (ﾉ´ヮ´)ﾉ*:･ﾟ✧" forState:UIControlStateNormal];
+          dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            %orig;
+            NSFileManager *fileManager = [NSFileManager defaultManager];
+            [fileManager removeItemAtPath:enPath error:nil];
+          });
+        }
+    }];
+  }
+
+  // NSURLConnection *conn = [[NSURLConnection alloc] initWithRequest:kmRequest delegate:self]
+}
+
+%new
+- (void)updateDownloadLabel {
+  NSString *currentTitle = [self clickToDownloadView].currentTitle;
+  if ([currentTitle hasSuffix:@"..."]) {
+    currentTitle = @"កំពុងទាញយក";
+  } else {
+    currentTitle = [currentTitle stringByAppendingString:@"."];
+  }
+  [[self clickToDownloadView] setTitle:currentTitle forState:UIControlStateNormal];
+}
+
 // Re-implement the hold-to-delete method to fix the bug where the delete method stops working after
 // a few seconds. There is still a problem because this action does not get called continuously
 - (void)handleLongPressForDeleteButtonWithGestureRecognizer:(UILongPressGestureRecognizer *)longPressGesture {
@@ -109,7 +201,7 @@ static CGPoint lastTranslatedPoint;
 
 - (void)layoutSubviews {
   %orig;
-  
+
   // Keyboard's background image
   if (!kbController) {
     return;
@@ -188,6 +280,34 @@ static CGPoint lastTranslatedPoint;
 %end
 
 %hook KSKKeyboardViewController // com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController
+/*
+#pragma mark - download delegate methods
+%new
+- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response {
+  [[[self keyboardView] clickToDownloadView] setTitle:@"Start" forState:UIControlStateNormal];
+  urlResponse = response;
+  downloadedData = [[NSMutableData alloc] init];
+}
+
+%new
+- (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data {
+  NSString *progress = [NSString stringWithFormat:@"%.0f%%", ((100.0/urlResponse.expectedContentLength)*downloadedData.length)];
+  [[[self keyboardView] clickToDownloadView] setTitle:progress forState:UIControlStateNormal];
+  [downloadedData appendData:data];
+}
+
+%new
+- (void)connectionDidFinishLoading:(NSURLConnection *)connection {
+  HBLogInfo(@"Download finished");
+}
+
+%new
+- (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error {
+  HBLogError(@"Download Error: %@", error.description);
+}
+*/
+
+#pragma mark - keyboard views
 - (void)viewDidAppear:(BOOL)arg1 {
   %orig;
 
@@ -206,7 +326,7 @@ static CGPoint lastTranslatedPoint;
   KSKClickSoundEnabled = [self boolForKey:@"KSKClickSoundEnabled"];
 }
 
-- (void)viewDidLayoutSubviews {  
+- (void)viewDidLayoutSubviews {
   %orig;
   // Change space bar label text
   KSKSpaceButton *spaceButton = [self keyboardView].spaceButton;
@@ -221,7 +341,7 @@ static CGPoint lastTranslatedPoint;
   if (isSpaceCursorEnabled) {
     // Add swipe up gesture for space bar to re-implement ? and ។ keys
     KSKSpaceButton *spaceButton = [self keyboardView].spaceButton;
-    UISwipeGestureRecognizer *spaceBarSwipeGesture = [[UISwipeGestureRecognizer alloc] 
+    UISwipeGestureRecognizer *spaceBarSwipeGesture = [[UISwipeGestureRecognizer alloc]
                                                         initWithTarget:spaceButton
                                                                 action:@selector(handleSpaceBarSwipeUp:)];
     spaceBarSwipeGesture.direction = UISwipeGestureRecognizerDirectionUp;
@@ -253,7 +373,7 @@ static CGPoint lastTranslatedPoint;
 
   for (KSKControlButton *controlButton in [[self keyboardView] subviews]) {
     NSArray *gestureRecognizers = controlButton.gestureRecognizers;
-    if ([gestureRecognizers count] == 2 && 
+    if ([gestureRecognizers count] == 2 &&
         [gestureRecognizers[0] isKindOfClass:%c(UILongPressGestureRecognizer)] &&
         [gestureRecognizers[1] isKindOfClass:%c(UISwipeGestureRecognizer)]) {
 
@@ -472,10 +592,10 @@ static CGPoint lastTranslatedPoint;
 - (void)applyThemeColor:(UIColor *)backgroundColor foregroundColor:(UIColor *)foregroundColor {
   // Background color
   [self view].backgroundColor = backgroundColor;
-  UICollectionViewController *emojiCollectionViewController = 
+  UICollectionViewController *emojiCollectionViewController =
     (UICollectionViewController *)[self emojiCollectionViewController];
   emojiCollectionViewController.collectionView.backgroundColor = backgroundColor;
-  
+
   [self bottomButtonBox].backgroundColor = backgroundColor;
 
   // // Foreground color
