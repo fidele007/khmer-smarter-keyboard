@@ -1,5 +1,6 @@
 #import <libcolorpicker.h>
 #import <AudioToolbox/AudioToolbox.h>
+#import "SSZipArchive/SSZipArchive.h"
 
 @interface UIView (KhmerSmarterKeyboard)
 // com_vanna_KhmerKeyboard_Keyboard.LightBox
@@ -43,6 +44,9 @@
 - (UIButton *)clickToDownloadView;
 - (UIViewController *)keyboardViewcontroller;
 - (UIView *)adsAndPredictionView;
+- (void)initializeKeyboard;
+// New methods
+- (BOOL)downloadDictDatabase:(NSString *)databaseURL outputFile:(NSString *)outputFile error:(NSError **)error;
 @end
 
 @interface KSKKeyboardViewController : UIInputViewController <NSURLConnectionDelegate> // com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController
@@ -76,9 +80,11 @@
 - (void)applyThemeColor:(UIColor *)backgroundColor foregroundColor:(UIColor *)foregroundColor;
 @end
 
-@interface SSZipArchive : NSObject
-+ (BOOL)unzipFileAtPath:(id)arg1 toDestination:(id)arg2 ;
-@end
+#define DEBUG 1
+#define EN_DATABASE_URL @"https://archive.org/download/english.sqlite3_v1/english.sqlite3_v1.zip"
+#define KH_DATABASE_URL @"https://archive.org/download/khmer.sqlite3_v1/khmer.sqlite3_v1.zip"
+#define EN_DATABASE_FILE @"english.sqlite3_v1.zip"
+#define KH_DATABASE_FILE @"khmer.sqlite3_v1.zip"
 
 static KSKKeyboardViewController *kbController;
 static BOOL isSpaceCursorEnabled;
@@ -100,66 +106,115 @@ static NSTimer *downloadTimer;
                                                  selector:@selector(updateDownloadLabel)
                                                  userInfo:nil
                                                   repeats:YES];
-
-  NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-  NSString *documentsDir = [paths firstObject];
+  NSError *error;
 
   KSKSpaceButton *spaceButton = [self spaceButton];
   NSString *spaceText = spaceButton.centerLabel.text;
-
-  if (![spaceText canBeConvertedToEncoding:NSASCIIStringEncoding]) {
-    NSString *kmPath = [documentsDir stringByAppendingPathComponent:@"khmer.sqlite3_v1.zip"];
-    NSURL *kmURL = [NSURL URLWithString:@"https://archive.org/download/khmer.sqlite3_v1/khmer.sqlite3_v1.zip"];
-    NSURLRequest *kmRequest = [NSURLRequest requestWithURL:kmURL];
-    [NSURLConnection sendAsynchronousRequest:kmRequest
-                                       queue:[NSOperationQueue currentQueue]
-                           completionHandler:^(NSURLResponse *response, NSData *data, NSError *error) {
-        if (error) {
-          HBLogError(@"Download Error: %@", error.description);
-        } else if (data && [data writeToFile:kmPath atomically:YES]) {
-          HBLogInfo(@"File is saved to %@", kmPath);
-          [SSZipArchive unzipFileAtPath:kmPath toDestination:documentsDir];
-
-          // Stop updating downloading label
-          [downloadTimer invalidate];
-          downloadTimer = nil;
-
-          [[self clickToDownloadView] setTitle:@"ទាញយករួចរាល់! (ﾉ´ヮ´)ﾉ*:･ﾟ✧" forState:UIControlStateNormal];
-          dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            %orig;
-            NSFileManager *fileManager = [NSFileManager defaultManager];
-            [fileManager removeItemAtPath:kmPath error:nil];
-          });
-        }
-    }];
+  if ([spaceText canBeConvertedToEncoding:NSASCIIStringEncoding]) {
+    [self downloadDictDatabase:EN_DATABASE_URL outputFile:EN_DATABASE_FILE error:&error];
   } else {
-    NSString *enPath = [documentsDir stringByAppendingPathComponent:@"english.sqlite3_v1.zip"];
-    NSURL *engURL = [NSURL URLWithString:@"https://archive.org/download/english.sqlite3_v1/english.sqlite3_v1.zip"];
-    NSURLRequest *enRequest = [NSURLRequest requestWithURL:engURL];
-    [NSURLConnection sendAsynchronousRequest:enRequest
-                                       queue:[NSOperationQueue currentQueue]
-                           completionHandler:^(NSURLResponse *response, NSData *data, NSError *error) {
-        if (error) {
-          HBLogError(@"Download Error: %@", error.description);
-        } else if (data && [data writeToFile:enPath atomically:YES]) {
-          HBLogInfo(@"File is saved to %@", enPath);
-          [SSZipArchive unzipFileAtPath:enPath toDestination:documentsDir];
+    [self downloadDictDatabase:KH_DATABASE_URL outputFile:KH_DATABASE_FILE error:&error];
+  }
+}
 
-          // Stop updating downloading label
-          [downloadTimer invalidate];
-          downloadTimer = nil;
+%new
+- (BOOL)downloadDictDatabase:(NSString *)databaseURL
+                  outputFile:(NSString *)outputFile
+                       error:(NSError **)mainError
+{
+  NSURLSession *session = [NSURLSession sharedSession];
+  NSFileManager *fileManager = [NSFileManager defaultManager];
+  NSURL *documentsURL = [fileManager URLsForDirectory:NSDocumentDirectory
+                                            inDomains:NSUserDomainMask][0];
+  NSURL *link = [NSURL URLWithString:databaseURL];
+  NSURL *fileURL = [documentsURL URLByAppendingPathComponent:outputFile];
 
-          [[self clickToDownloadView] setTitle:@"ទាញយករួចរាល់! (ﾉ´ヮ´)ﾉ*:･ﾟ✧" forState:UIControlStateNormal];
-          dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            %orig;
-            NSFileManager *fileManager = [NSFileManager defaultManager];
-            [fileManager removeItemAtPath:enPath error:nil];
-          });
-        }
-    }];
+  // If zip file is already there
+  if ([fileManager fileExistsAtPath:fileURL.path]) {
+    NSError *unzipError;
+    BOOL unzipStatus = [SSZipArchive unzipFileAtPath:fileURL.path
+                                       toDestination:documentsURL.path
+                                           overwrite:YES
+                                            password:nil
+                                               error:&unzipError];
+    if (unzipStatus) {
+      dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1 * NSEC_PER_SEC),
+                     dispatch_get_main_queue(), ^{
+        [[self clickToDownloadView] setTitle:@"ទាញយកដោយជោគជ័យ! (ﾉ´ヮ´)ﾉ*:･ﾟ✧"
+                                    forState:UIControlStateNormal];
+        [fileManager removeItemAtPath:fileURL.path error:nil];
+        [self performSelector:@selector(initializeKeyboard) withObject:nil afterDelay:5.0];
+      });
+      return YES;
+    } else {
+      HBLogInfo(@"Unzip error: %@. File will be removed and re-downloaded.", unzipError.description);
+      [fileManager removeItemAtPath:fileURL.path error:nil];
+    }
   }
 
-  // NSURLConnection *conn = [[NSURLConnection alloc] initWithRequest:kmRequest delegate:self]
+  // Else download a new zip file
+  NSURLRequest *request = [NSURLRequest requestWithURL:link];
+  [[session downloadTaskWithRequest:request
+              completionHandler:^(NSURL *location,
+                                  NSURLResponse *response,
+                                  NSError *downloadError) {
+        if (downloadError) {
+          HBLogError(@"Download Error: %@", downloadError.description);
+          //TODO: Re-display the download button
+          dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1 * NSEC_PER_SEC),
+                         dispatch_get_main_queue(), ^{
+            [[self clickToDownloadView] setTitle:@"ការទាញយកបរាជ័យ (ノಠ益ಠ)ノ彡┻━┻"
+                                        forState:UIControlStateNormal];
+            [self performSelector:@selector(initializeKeyboard) withObject:nil afterDelay:5.0];
+          });
+          return;
+        } else {
+          // Stop updating downloading label
+          [downloadTimer invalidate];
+          downloadTimer = nil;
+
+          NSError *moveError;
+          NSError *unzipError;
+          if (![fileManager moveItemAtURL:location toURL:fileURL error:&moveError] ||
+              ![SSZipArchive unzipFileAtPath:fileURL.path
+                                       toDestination:documentsURL.path
+                                           overwrite:YES
+                                            password:nil
+                                               error:&unzipError])
+          {
+            HBLogError(@"Moving file failed: %@", moveError.description);
+#ifdef DEBUG
+            NSString *logFile = [documentsURL.path stringByAppendingPathComponent:@"log.txt"];
+            [moveError.description writeToFile:logFile
+                                    atomically:YES
+                                      encoding:NSUTF8StringEncoding
+                                         error:nil];
+#endif
+            //TODO: Re-display the download button
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1 * NSEC_PER_SEC),
+                           dispatch_get_main_queue(), ^{
+              [[self clickToDownloadView] setTitle:@"មិនអាចពន្លាឯកសារបាន (ノಠ益ಠ)ノ彡┻━┻"
+                                          forState:UIControlStateNormal];
+              [self performSelector:@selector(initializeKeyboard) withObject:nil afterDelay:5.0];
+            });
+            return;
+          }
+
+          [fileManager removeItemAtPath:fileURL.path error:nil];
+          dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1 * NSEC_PER_SEC),
+                         dispatch_get_main_queue(), ^{
+            [[self clickToDownloadView] setTitle:@"ទាញយកដោយជោគជ័យ! (ﾉ´ヮ´)ﾉ*:･ﾟ✧"
+                                        forState:UIControlStateNormal];
+            [self performSelector:@selector(initializeKeyboard) withObject:nil afterDelay:5.0];
+          });
+        }
+    }] resume];
+
+  if (mainError) {
+    return NO;
+  } else {
+    return YES;
+  }
 }
 
 %new
@@ -301,34 +356,6 @@ static NSTimer *downloadTimer;
 %end
 
 %hook KSKKeyboardViewController // com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController
-/*
-#pragma mark - download delegate methods
-%new
-- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response {
-  [[[self keyboardView] clickToDownloadView] setTitle:@"Start" forState:UIControlStateNormal];
-  urlResponse = response;
-  downloadedData = [[NSMutableData alloc] init];
-}
-
-%new
-- (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data {
-  NSString *progress = [NSString stringWithFormat:@"%.0f%%", ((100.0/urlResponse.expectedContentLength)*downloadedData.length)];
-  [[[self keyboardView] clickToDownloadView] setTitle:progress forState:UIControlStateNormal];
-  [downloadedData appendData:data];
-}
-
-%new
-- (void)connectionDidFinishLoading:(NSURLConnection *)connection {
-  HBLogInfo(@"Download finished");
-}
-
-%new
-- (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error {
-  HBLogError(@"Download Error: %@", error.description);
-}
-*/
-
-#pragma mark - keyboard views
 - (void)viewDidAppear:(BOOL)arg1 {
   %orig;
 
