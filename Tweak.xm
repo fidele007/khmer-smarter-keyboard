@@ -42,6 +42,7 @@
 - (UIImage *)imageWithImage:(UIImage *)image scaledToSize:(CGSize)newSize;
 - (UIButton *)clickToDownloadView;
 - (UIViewController *)keyboardViewcontroller;
+- (UIView *)adsAndPredictionView;
 @end
 
 @interface KSKKeyboardViewController : UIInputViewController <NSURLConnectionDelegate> // com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController
@@ -207,7 +208,23 @@ static NSTimer *downloadTimer;
     return;
   }
 
+  // Color Keyboard Theme
   NSInteger themeOption = [kbController integerForKey:@"KSKSelectedThemeOption"];
+  if (themeOption == 0) {
+    return;
+  }
+
+  NSString *kbBackgroundColorHex = [kbController objectForKey:@"keyboardBackgroundColor"];
+  NSString *kbForegroundColorHex = [kbController objectForKey:@"keyboardForegroundColor"];
+  UIColor *kbBackgroundColor = LCPParseColorString(kbBackgroundColorHex, @"#1E4679");
+  UIColor *kbForegroundColor = LCPParseColorString(kbForegroundColorHex, @"#FFFFFF");
+  if (themeOption == 2) {
+    kbBackgroundColor = [UIColor clearColor];
+  }
+
+  [[self adsAndPredictionView] setBackgroundColor:kbBackgroundColor];
+  [kbController applyThemeColor:kbBackgroundColor foregroundColor:kbForegroundColor];
+
   if (themeOption != 2) {
     return;
   }
@@ -351,21 +368,6 @@ static NSTimer *downloadTimer;
     [spaceButton addGestureRecognizer:spaceBarSwipeGesture];
     [spaceBarSwipeGesture release];
   }
-  // Color Keyboard Theme
-  NSInteger themeOption = [self integerForKey:@"KSKSelectedThemeOption"];
-  if (themeOption == 0) {
-    return;
-  }
-
-  NSString *kbBackgroundColorHex = [self objectForKey:@"keyboardBackgroundColor"];
-  NSString *kbForegroundColorHex = [self objectForKey:@"keyboardForegroundColor"];
-  UIColor *kbBackgroundColor = LCPParseColorString(kbBackgroundColorHex, @"#1E4679");
-  UIColor *kbForegroundColor = LCPParseColorString(kbForegroundColorHex, @"#FFFFFF");
-  if (themeOption == 2) {
-    kbBackgroundColor = [UIColor clearColor];
-  }
-
-  [self applyThemeColor:kbBackgroundColor foregroundColor:kbForegroundColor];
 
   /*
   // Try solving the long pressing delete button bug, but this does not solve it.
