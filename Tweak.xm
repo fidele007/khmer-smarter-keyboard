@@ -94,7 +94,7 @@ static NSTimer *downloadTimer;
 - (void)downloadPredictionDataRequested {
   // %orig;
 
-  [[self clickToDownloadView] setTitle:@"កំពុងទាញយក" forState:UIControlStateNormal];
+  [[self clickToDownloadView] setTitle:@"ᗣᗣᗣᗣ កំពុងទាញយក ᗧ·····◦" forState:UIControlStateNormal];
   downloadTimer = [NSTimer scheduledTimerWithTimeInterval:0.5
                                                    target:self
                                                  selector:@selector(updateDownloadLabel)
@@ -164,13 +164,17 @@ static NSTimer *downloadTimer;
 
 %new
 - (void)updateDownloadLabel {
-  NSString *currentTitle = [self clickToDownloadView].currentTitle;
-  if ([currentTitle hasSuffix:@"..."]) {
-    currentTitle = @"កំពុងទាញយក";
-  } else {
-    currentTitle = [currentTitle stringByAppendingString:@"."];
+  NSString *updatedTitle = [self clickToDownloadView].currentTitle;
+  if ([updatedTitle rangeOfString:@"ᗧ·"].location != NSNotFound) {
+    updatedTitle = [updatedTitle stringByReplacingOccurrencesOfString:@"ᗧ·" withString:@"O"];
+    updatedTitle = [updatedTitle stringByAppendingString:@"·"];
+  } else if ([updatedTitle rangeOfString:@"ᗧ◦"].location != NSNotFound) {
+    updatedTitle = [updatedTitle stringByReplacingOccurrencesOfString:@"ᗧ◦" withString:@"O"];
+    updatedTitle = [updatedTitle stringByAppendingString:@"◦"];
+  } else if ([updatedTitle rangeOfString:@"O"].location != NSNotFound) {
+    updatedTitle = [updatedTitle stringByReplacingOccurrencesOfString:@"O" withString:@"ᗧ"];
   }
-  [[self clickToDownloadView] setTitle:currentTitle forState:UIControlStateNormal];
+  [[self clickToDownloadView] setTitle:updatedTitle forState:UIControlStateNormal];
 }
 
 // Re-implement the hold-to-delete method to fix the bug where the delete method stops working after
