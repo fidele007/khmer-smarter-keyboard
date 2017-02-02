@@ -46,6 +46,7 @@
 - (UIView *)adsAndPredictionView;
 - (void)initializeKeyboard;
 // New methods
+- (void)updatePredictionBar;
 - (BOOL)downloadDictDatabase:(NSString *)databaseURL outputFile:(NSString *)outputFile error:(NSError **)error;
 @end
 
@@ -67,6 +68,7 @@
 - (BOOL)boolForKey:(NSString *)key;
 - (NSInteger)integerForKey:(NSString *)key;
 - (CGFloat)floatForKey:(NSString *)key;
+- (void)updateSpaceBar;
 @end
 
 @interface KSKEmojiKeyboardViewController : UIViewController // com_vanna_KhmerKeyboard_Keyboard.EmojiKeyboardViewController
@@ -92,8 +94,6 @@ static BOOL KSKClickSoundEnabled;
 static CGPoint iniTouchedPoint;
 static CGPoint lastTranslatedPoint;
 
-// static NSMutableData *downloadedData;
-// static NSURLResponse *urlResponse;
 static NSTimer *downloadTimer;
 
 %hook KSKKeyboardView // com_vanna_KhmerKeyboard_Keyboard.KeyboardView
@@ -143,7 +143,7 @@ static NSTimer *downloadTimer;
         [[self clickToDownloadView] setTitle:@"ទាញយកដោយជោគជ័យ! (ﾉ´ヮ´)ﾉ*:･ﾟ✧"
                                     forState:UIControlStateNormal];
         [fileManager removeItemAtPath:fileURL.path error:nil];
-        [self performSelector:@selector(initializeKeyboard) withObject:nil afterDelay:5.0];
+        [self performSelector:@selector(updatePredictionBar) withObject:nil afterDelay:5.0];
       });
       return YES;
     } else {
@@ -165,7 +165,7 @@ static NSTimer *downloadTimer;
                          dispatch_get_main_queue(), ^{
             [[self clickToDownloadView] setTitle:@"ការទាញយកបរាជ័យ (ノಠ益ಠ)ノ彡┻━┻"
                                         forState:UIControlStateNormal];
-            [self performSelector:@selector(initializeKeyboard) withObject:nil afterDelay:5.0];
+            [self performSelector:@selector(updatePredictionBar) withObject:nil afterDelay:5.0];
           });
           return;
         } else {
@@ -195,7 +195,7 @@ static NSTimer *downloadTimer;
                            dispatch_get_main_queue(), ^{
               [[self clickToDownloadView] setTitle:@"មិនអាចពន្លាឯកសារបាន (ノಠ益ಠ)ノ彡┻━┻"
                                           forState:UIControlStateNormal];
-              [self performSelector:@selector(initializeKeyboard) withObject:nil afterDelay:5.0];
+              [self performSelector:@selector(updatePredictionBar) withObject:nil afterDelay:5.0];
             });
             return;
           }
@@ -205,7 +205,7 @@ static NSTimer *downloadTimer;
                          dispatch_get_main_queue(), ^{
             [[self clickToDownloadView] setTitle:@"ទាញយកដោយជោគជ័យ! (ﾉ´ヮ´)ﾉ*:･ﾟ✧"
                                         forState:UIControlStateNormal];
-            [self performSelector:@selector(initializeKeyboard) withObject:nil afterDelay:5.0];
+            [self performSelector:@selector(updatePredictionBar) withObject:nil afterDelay:5.0];
           });
         }
     }] resume];
@@ -214,6 +214,14 @@ static NSTimer *downloadTimer;
     return NO;
   } else {
     return YES;
+  }
+}
+
+%new
+- (void)updatePredictionBar {
+  [self initializeKeyboard];
+  if (kbController != nil) {
+    [kbController updateSpaceBar];
   }
 }
 
@@ -256,13 +264,16 @@ static NSTimer *downloadTimer;
     if (KSKClickSoundEnabled) {
       AudioServicesPlaySystemSound(1104);
     }
+
+    if (kbController != nil) {
+      [kbController updateSpaceBar];
+    }
   }
 }
 
 - (void)layoutSubviews {
   %orig;
 
-  // Keyboard's background image
   if (!kbController) {
     return;
   }
@@ -288,6 +299,7 @@ static NSTimer *downloadTimer;
     return;
   }
 
+  // Keyboard's background image
   NSString *backgroundImagePath = [kbController objectForKey:@"KSKBackgroundImage"];
   CGFloat overlayAlpha = [kbController floatForKey:@"KSKBackgroundAlpha"] ?: 0;
   if (backgroundImagePath && ![backgroundImagePath isEqualToString:@""]) {
@@ -376,6 +388,28 @@ static NSTimer *downloadTimer;
 
 - (void)viewDidLayoutSubviews {
   %orig;
+  [self updateSpaceBar];
+
+  /*
+  // Try solving the long pressing delete button bug, but this does not solve it.
+  // Commented out for now
+
+  for (KSKControlButton *controlButton in [[self keyboardView] subviews]) {
+    NSArray *gestureRecognizers = controlButton.gestureRecognizers;
+    if ([gestureRecognizers count] == 2 &&
+        [gestureRecognizers[0] isKindOfClass:%c(UILongPressGestureRecognizer)] &&
+        [gestureRecognizers[1] isKindOfClass:%c(UISwipeGestureRecognizer)]) {
+
+      UILongPressGestureRecognizer *longPressGesture = gestureRecognizers[0];
+      UISwipeGestureRecognizer *swipeGesture = gestureRecognizers[1];
+      [swipeGesture requireGestureRecognizerToFail:longPressGesture];
+    }
+  }
+  */
+}
+
+%new
+- (void)updateSpaceBar {
   // Change space bar label text
   KSKSpaceButton *spaceButton = [self keyboardView].spaceButton;
   NSString *origText = spaceButton.centerLabel.text;
@@ -399,23 +433,6 @@ static NSTimer *downloadTimer;
     [spaceButton addGestureRecognizer:spaceBarSwipeGesture];
     [spaceBarSwipeGesture release];
   }
-
-  /*
-  // Try solving the long pressing delete button bug, but this does not solve it.
-  // Commented out for now
-
-  for (KSKControlButton *controlButton in [[self keyboardView] subviews]) {
-    NSArray *gestureRecognizers = controlButton.gestureRecognizers;
-    if ([gestureRecognizers count] == 2 &&
-        [gestureRecognizers[0] isKindOfClass:%c(UILongPressGestureRecognizer)] &&
-        [gestureRecognizers[1] isKindOfClass:%c(UISwipeGestureRecognizer)]) {
-
-      UILongPressGestureRecognizer *longPressGesture = gestureRecognizers[0];
-      UISwipeGestureRecognizer *swipeGesture = gestureRecognizers[1];
-      [swipeGesture requireGestureRecognizerToFail:longPressGesture];
-    }
-  }
-  */
 }
 
 %new
@@ -677,6 +694,16 @@ static NSTimer *downloadTimer;
 }
 %end
 
+// Update space bar with labels and gestures when choosing keyboard from globe popup view
+%hook KSKGlobePopupView //com_vanna_KhmerKeyboard_Keyboard.GlobePopupView
+- (void)buttonPressed:(id)arg1 {
+  %orig;
+  if (kbController != nil) {
+    [kbController updateSpaceBar];
+  }
+}
+%end
+
 %ctor {
   %init(KSKKeyboardViewController = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.KeyboardViewController"),
         KSKKeyboardView = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.KeyboardView"),
@@ -684,6 +711,7 @@ static NSTimer *downloadTimer;
         KSKCharacterButton = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.CharacterButton"),
         KSKSpaceButton = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.SpaceButton"),
         KSKEmojiKeyboardViewController = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.EmojiKeyboardViewController"),
-        KSKEmojiCollectionViewController = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.EmojiCollectionViewController")
+        KSKEmojiCollectionViewController = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.EmojiCollectionViewController"),
+        KSKGlobePopupView = objc_getClass("com_vanna_KhmerKeyboard_Keyboard.GlobePopupView")
        );
 }
